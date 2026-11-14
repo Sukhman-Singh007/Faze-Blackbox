@@ -116,7 +116,7 @@ export default function App() {
       <header className="sticky top-0 z-40 border-b border-faze-line bg-black/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <button onClick={() => setView('landing')} className="flex items-center gap-2 text-left">
-            <span className="grid h-9 w-9 place-items-center rounded bg-faze-red font-display text-lg">F</span>
+            <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true" className="shrink-0"><rect x="2" y="2" width="32" height="32" rx="5" fill="#0A0A0B" stroke="#E10600" strokeWidth="2"/><rect x="9" y="16" width="18" height="11" rx="2" fill="none" stroke="#E10600" strokeWidth="2"/><path d="M13 16v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#E10600" strokeWidth="2"/><circle cx="18" cy="21" r="2" fill="#E10600"/></svg>
             <span className="leading-tight"><span className="block font-display text-base tracking-wide">FAZE BLACKBOX</span>
             <span className="block text-[11px] text-zinc-400">Unlock the Past. Build the Next Generation.</span></span>
           </button>
@@ -146,7 +146,7 @@ export default function App() {
 
       <footer className="border-t border-faze-line py-6 text-center text-xs text-zinc-500">
         FaZe Blackbox — HackUTA 2026 FaZe Clan sponsor challenge. Fan-made demo concept; not affiliated with or endorsed by FaZe Clan.
-        Historical timeline slots are placeholders for the sponsor-provided 2010–2026 timeline. Sponsored episodes shown are hypothetical.
+        History from “FaZe Clan: A Timeline, 2010–2026” (sponsor-provided). Fan-made demo concept; not affiliated with or endorsed by FaZe Clan. Sponsored episodes shown are hypothetical.
       </footer>
     </div>
   )
@@ -185,11 +185,11 @@ function Landing(props: {
         <p className="mx-auto mt-3 max-w-2xl text-zinc-300">FaZe has fans who lived its history — and a new generation just discovering it. Blackbox puts them on the same team.</p>
         <div className="mt-6 grid gap-3 text-left md:grid-cols-2">
           <div className="rounded-2xl border border-faze-line bg-faze-panel p-5">
-            <p className="font-mono text-xs font-bold text-faze-red">👤 LEGACY AGENT — THE RETURNING FAN</p>
+            <p className="font-mono text-xs font-bold text-faze-red">LEGACY AGENT — THE RETURNING FAN</p>
             <p className="mt-2 text-sm text-zinc-300">You know the history. You see the clues a new fan never could — and for the first time, that knowledge is the key to the game.</p>
           </div>
           <div className="rounded-2xl border border-faze-line bg-faze-panel p-5">
-            <p className="font-mono text-xs font-bold text-faze-red">🔓 NEW RECRUIT — THE NEW FAN</p>
+            <p className="font-mono text-xs font-bold text-faze-red">NEW RECRUIT — THE NEW FAN</p>
             <p className="mt-2 text-sm text-zinc-300">You hold the puzzle and the only keypad. You learn FaZe history by playing it — not by reading about it — because your partner has to teach it to you to win.</p>
           </div>
         </div>
@@ -340,14 +340,15 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
   const [guess, setGuess] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
-  const [reveal, setReveal] = useState<null | { heading: string; body: string; timelineSlot: string }>(null)
+  const [reveal, setReveal] = useState<null | { heading: string; body: string; source: string }>(null)
+  const [hintLevel, setHintLevel] = useState(0)
   // Timer is anchored to the room's startedAt (persisted in room state),
   // not to this mount — so a refresh mid-game does not reset the clock.
   const startRef = useRef(new Date(room.startedAt).getTime())
   const [elapsed, setElapsed] = useState(() => Date.now() - startRef.current)
 
   useEffect(() => { const t = setInterval(() => setElapsed(Date.now() - startRef.current), 1000); return () => clearInterval(t) }, [])
-  useEffect(() => { setGuess(''); setMsg('') }, [room.stage])
+  useEffect(() => { setGuess(''); setMsg(''); setHintLevel(0) }, [room.stage])
 
   const attempts = room.attempts[stage.id] || 0
 
@@ -397,7 +398,7 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {/* Legacy panel — hidden content from Recruit, and vice versa */}
         <section className={`rounded-2xl border p-6 shadow-card ${role === 'legacy' ? 'border-faze-red bg-faze-panel shadow-glow' : 'border-faze-line bg-black/40 opacity-60'}`}>
-          <p className="font-mono text-xs font-bold text-faze-red">👤 LEGACY AGENT — {room.legacyName || '—'}</p>
+          <p className="font-mono text-xs font-bold text-faze-red">LEGACY AGENT — {room.legacyName || '—'}</p>
           {role === 'legacy' ? (
             <><h2 className="mt-2 font-display text-lg">{stage.legacyClue.heading}</h2>
             <p className="mt-2 text-zinc-300">{stage.legacyClue.body}</p>
@@ -411,7 +412,7 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
         </section>
 
         <section className={`rounded-2xl border p-6 shadow-card ${role === 'recruit' ? 'border-faze-red bg-faze-panel shadow-glow' : 'border-faze-line bg-black/40 opacity-60'}`}>
-          <p className="font-mono text-xs font-bold text-faze-red">🔓 NEW RECRUIT — {room.recruitName || '—'}</p>
+          <p className="font-mono text-xs font-bold text-faze-red">NEW RECRUIT — {room.recruitName || '—'}</p>
           {role === 'recruit' ? (
             <><h2 className="mt-2 font-display text-lg">{stage.recruitPuzzle.heading}</h2>
             <p className="mt-2 text-zinc-300">{stage.recruitPuzzle.body}</p>
@@ -422,7 +423,16 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
                 className="w-full rounded-lg border border-faze-line bg-black px-3 py-2.5 font-mono text-lg tracking-[0.25em]" />
               <button disabled={busy} onClick={submit} className="shrink-0 rounded-xl bg-faze-red px-5 py-2.5 font-bold shadow-glow disabled:opacity-50">{busy ? 'Checking…' : 'Unlock'}</button>
             </div>
-            <p className="mt-2 text-xs text-zinc-500">{stage.recruitPuzzle.hint}</p></>
+            <div className="mt-3">
+              {stage.recruitPuzzle.hints.slice(0, hintLevel).map((h, i) => (
+                <p key={i} className="mt-1 rounded-lg bg-black/60 px-3 py-2 text-xs text-zinc-300"><span className="font-bold text-faze-red">HINT {i + 1} — </span>{h}</p>
+              ))}
+              {hintLevel < stage.recruitPuzzle.hints.length && (
+                <button onClick={() => setHintLevel((n) => n + 1)} className="mt-2 rounded-lg border border-faze-line px-3 py-1.5 text-xs font-bold text-zinc-300 hover:border-faze-red">
+                  Need a hint? ({stage.recruitPuzzle.hints.length - hintLevel} left)
+                </button>
+              )}
+            </div></>
           ) : (
             <><h2 className="mt-2 font-display text-lg">LOCKED PUZZLE</h2>
             <p className="mt-2 text-zinc-400">Only the New Recruit sees the puzzle and the keypad. Your clue is the missing half — share it.</p>
@@ -432,7 +442,7 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
       </div>
 
       {msg && <p role="alert" className="mt-4 rounded-xl border border-red-800 bg-red-950/60 px-4 py-3 text-sm text-red-200">{msg}</p>}
-      <p className="mt-4 text-center text-xs text-zinc-500">Last event: {room.lastEvent} · Backend: {roomStore.backend} {roomStore.backend === 'demo-local' ? '(two tabs, no keys needed — Supabase Realtime when VITE_SUPABASE_URL is set)' : '(Supabase Realtime)'}</p>
+      <p className="mt-4 text-center text-xs text-zinc-500">Last event: {room.lastEvent} · Backend: {roomStore.backend} {roomStore.backend === 'demo-local' ? '(demo-local: two tabs on this device)' : '(Supabase answer validation on; rooms still stored locally)'}</p>
 
       {reveal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/85 p-4">
@@ -440,7 +450,7 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
             <div className="vault-ring mx-auto grid h-24 w-24 place-items-center rounded-full"><span className="grid h-20 w-20 place-items-center rounded-full bg-black font-display text-3xl">✓</span></div>
             <h2 className="mt-4 font-display text-2xl">{reveal.heading}</h2>
             <p className="mt-2 text-zinc-300">{reveal.body}</p>
-            <p className="mt-3 rounded-xl bg-black p-3 text-xs text-zinc-400">{reveal.timelineSlot}</p>
+            <p className="mt-3 rounded-xl bg-black p-3 text-xs text-zinc-400">{reveal.source}</p>
             <button onClick={closeReveal} className="mt-5 w-full rounded-xl bg-faze-red px-4 py-3 font-bold">
               {room.status === 'completed' ? 'Open the vault →' : 'Continue to next stage →'}</button>
           </div>
@@ -462,14 +472,14 @@ function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: s
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 text-center">
       <div className={`vault-ring mx-auto grid h-40 w-40 place-items-center rounded-full ${unlocked ? 'vault-open' : ''}`}>
-        <div className="grid h-32 w-32 place-items-center rounded-full bg-black"><span className="font-display text-5xl">🔓</span></div>
+        <div className="grid h-32 w-32 place-items-center rounded-full bg-black"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="28" width="36" height="26" rx="4" fill="none" stroke="#E10600" strokeWidth="4"/><path d="M22 28v-8a10 10 0 0 1 20 0v8" fill="none" stroke="#E10600" strokeWidth="4"/><circle cx="32" cy="40" r="4" fill="#E10600"/></svg></div>
       </div>
       <p className="mt-6 inline-block rounded-full border border-green-500/60 bg-green-950/40 px-4 py-1 text-xs font-bold tracking-widest text-green-300">★ MISSION COMPLETE — 3 / 3 STAGES SOLVED TOGETHER</p>
       <h1 className="mt-4 font-display text-4xl md:text-5xl"><span className="shimmer-text">THE VAULT IS OPEN</span></h1>
       <p className="mt-3 text-zinc-300">Room {room.code} · {room.legacyName} (Legacy) + {room.recruitName} (Recruit) · {fmt(totalMs)} · {totalAttempts} total attempts</p>
 
       <div className="mx-auto mt-6 max-w-md rounded-2xl border border-yellow-600/60 bg-gradient-to-b from-yellow-950/40 to-faze-panel p-6 text-left">
-        <p className="font-mono text-xs font-bold text-yellow-300">🏆 SHAREABLE ACHIEVEMENT</p>
+        <p className="font-mono text-xs font-bold text-yellow-300">SHAREABLE ACHIEVEMENT</p>
         <p className="mt-2 font-display text-xl">BLACKBOX UNLOCKED</p>
         <p className="mt-1 text-sm text-zinc-300">Completed all 3 stages cooperatively — no solo solves.</p>
         <p className="mt-2 text-xs text-zinc-500">Verified by room state · {new Date().toLocaleDateString()}</p>

@@ -1,10 +1,25 @@
-// FaZe Blackbox — demo puzzles.
-// IMPORTANT: these are FICTIONAL demo puzzles for the hackathon MVP.
-// No historical FaZe facts are invented here. The `reveal` slots are
-// placeholders to be replaced with the sponsor's official 2010-2026 timeline.
-// Answers are NEVER stored in plaintext in the client: only SHA-256 hashes
-// are shipped. In production, validation runs in the Supabase Edge Function
-// (supabase/functions/validate-answer) which holds the same hashes server-side.
+// FaZe Blackbox — puzzles, built only from the sponsor-provided timeline:
+// "FaZe Clan: A Timeline, 2010–2026" (sponsor doc, sourced to FaZe Clan
+// YouTube, Liquipedia, Forbes and others). No historical fact here is
+// invented. Sensitive material from the doc (lawsuits, crypto scandals,
+// the 2025 exodus) is deliberately not used — this is a fan game about
+// the milestones.
+//
+// DESIGN RULES (enforced by puzzles.test.ts):
+// - The answer word never appears in the visible puzzle text of the
+//   stage that asks for it — except Stage 1, the onboarding stage,
+//   where the answer is a *transformation* (first four letters) of a
+//   name the Legacy Agent must first *select* from decoys.
+// - Both players must contribute reasoning, not just typing: the
+//   Legacy Agent holds dated facts, the Recruit holds the question
+//   and the keypad. Neither side's text alone yields the answer.
+// - Answers are stored only as SHA-256 hashes, never as plaintext
+//   (and never in a code comment). A short-word hash is still
+//   brute-forceable, so this is demo-local protection only —
+//   server-side validation (Phase 5) is what makes it real.
+// - Hints are progressive: each stage has three, revealed one at a
+//   time by the player, so first-timers can finish without the game
+//   handing them the answer up front.
 
 export type Role = 'legacy' | 'recruit'
 
@@ -15,90 +30,128 @@ export interface Stage {
   // What ONLY the Legacy Agent sees
   legacyClue: { heading: string; body: string; detail: string }
   // What ONLY the New Recruit sees (the puzzle + input)
-  recruitPuzzle: { heading: string; body: string; detail: string; placeholder: string; hint: string }
+  recruitPuzzle: { heading: string; body: string; detail: string; placeholder: string; hints: string[] }
   answerHash: string
   answerLength: number
-  // Shown to BOTH players after the stage is solved. Replace with official timeline.
-  reveal: { heading: string; body: string; timelineSlot: string }
+  // Shown to BOTH players after the stage is solved. Real history.
+  reveal: { heading: string; body: string; source: string }
 }
+
+const SOURCE = "Source: 'FaZe Clan: A Timeline, 2010–2026' (sponsor-provided), via FaZe Clan YouTube, Liquipedia and Forbes."
 
 export const STAGES: Stage[] = [
   {
     id: 1,
     title: 'Stage 1 — The First Key',
-    subtitle: 'Unscramble the name on the vault door.',
+    subtitle: 'What was FaZe called when the first video went up?',
     legacyClue: {
       heading: 'ARCHIVE CARD — EYES ONLY: LEGACY AGENT',
-      body: 'Take the FIRST letter of each word, in order:',
-      detail: 'FALCON  •  ALPHA  •  ZENITH  •  ECHO\nThat spells the 4-letter code word. Tell your Recruit the letters — do NOT type it yourself, you have no keypad.',
+      body: 'The founding file. Three names for one crew — only one of them is from May 2010:',
+      detail:
+        '• May 2010 — Eric “ClipZ” Rivera, Jeff “House Cat” Emann and Ben “Resistance” Christensen start a Call of Duty trickshotting crew on YouTube. The crew is called FaZe Sniping.\n' +
+        '• May 31, 2010 — the first upload: “FaZe Sniping Intro” (475,099 lifetime views). ILLCAMS Episode 1 follows three days later.\n' +
+        '• Later — the crew becomes known as FaZe Clan.\n' +
+        '• Apr 2014 — a European division launches under a different name: FaZe France.\n' +
+        'Your Recruit needs the ORIGINAL name — the one from May 2010, not the later one and not the division. Read it to them exactly.',
     },
     recruitPuzzle: {
       heading: 'LOCKED KEYPAD — NEW RECRUIT',
-      body: 'Scrambled letters on the vault door:',
-      detail: 'Z  •  E  •  F  •  A\nYour Legacy Agent holds an archive card that spells the word. Ask them what it says, unscramble these letters to match it, then enter the code.',
+      body: 'The vault wants the first four letters of the second word of the crew’s ORIGINAL name.',
+      detail:
+        'Your Legacy Agent has the founding file. Ask them: what was the crew called in May 2010 — the name on the very first upload? Then take the first four letters of the SECOND word of that name and enter them.',
       placeholder: 'Enter 4-letter code',
-      hint: 'Hint: your partner’s first letters spell it.',
+      hints: [
+        'The founding name is from May 2010 — not the later name, and not the 2014 division.',
+        'The crew was called FaZe Sniping when the first video went up.',
+        'Take the first four letters of the second word: S-N-I-P.',
+      ],
     },
-    answerHash: '7e71bc438645f7ce334cf9b678d82459b3cf521eb78b03c3a551d2edd618cc7f', // FAZE
+    answerHash: 'efdea8af41d84aeae41b5f1b5fe33fee15c449863d33991c94b01d50ae5402be',
     answerLength: 4,
     reveal: {
-      heading: 'VAULT LOG 01 — UNLOCKED',
-      body: 'Stage 1 complete. You worked as one team: one player held the clue, the other held the keypad.',
-      timelineSlot: 'TIMELINE SLOT 2010–2013 — replace this text with the sponsor-provided official FaZe Clan timeline entry for this era.',
+      heading: 'VAULT LOG 01 — 2010–2013: THREE KIDS AND AN INTERVENTION',
+      body: 'May 2010 — three players start FaZe Sniping, a Call of Duty trickshotting crew on YouTube. May 31, 2010 — the first upload, “FaZe Sniping Intro”. Aug 3, 2010 — Thomas “Temperrr” Oliveira joins at sixteen; his logo concept, a reversed F over a C, becomes the mark. Oct 8, 2012 — the 1-million-subscriber teamtage, 12.1M views, still the biggest video FaZe ever made.',
+      source: SOURCE,
     },
   },
   {
     id: 2,
-    title: 'Stage 2 — The Cipher Sheet',
-    subtitle: 'Decode the number lock.',
+    title: 'Stage 2 — The Shared Roof',
+    subtitle: 'In 2014 the crew stopped being just a channel. What did they move into?',
     legacyClue: {
-      heading: 'CIPHER SHEET — EYES ONLY: LEGACY AGENT',
-      body: 'The archive cipher sheet reads:',
-      detail: '3 = C   •   12 = L   •   1 = A   •   14 = N\nRead the numbers to your Recruit in order. You cannot enter the code — only they have the keypad.',
+      heading: 'DOSSIER 2014–2017 — EYES ONLY: LEGACY AGENT',
+      body: 'Four entries from the middle era. Only one of them is about where the crew lived:',
+      detail:
+        '• 2014 — Temperrr and Banks set up shared living/content space in Plainview, NY, marking the pivot from pure trickshot channel to lifestyle brand.\n' +
+        '• Jan 2016 — FaZe buys G2’s CS:GO roster for ~$700K, entering a second major esport.\n' +
+        '• Feb 2017 — NiKo signs from mousesports, a reported ~$500K buyout, a Counter-Strike record at the time.\n' +
+        '• Oct 2017 — the superteam (GuardiaN, olofmeister, NiKo, rain, karrigan) wins ELEAGUE CS:GO Premier, $500K, beating Astralis 2–0.\n' +
+        'Your Recruit is asking about the place, not a player or a trophy. Read them the 2014 entry — the one about living together.',
     },
     recruitPuzzle: {
-      heading: 'NUMBER LOCK — NEW RECRUIT',
-      body: 'The lock shows four numbers:',
-      detail: '3  –  12  –  1  –  14\nYour Legacy Agent has the cipher sheet that turns numbers into letters. Ask them for each number, then enter the 4-letter word.',
-      placeholder: 'Enter 4-letter word',
-      hint: 'Hint: 3-12-1-14 is a word, not a number.',
+      heading: 'NUMBER-FREE LOCK — NEW RECRUIT',
+      body: 'The vault wants a 5-letter word: the place the crew lived and filmed in together.',
+      detail:
+        'In 2014 the crew stopped being just a channel — they moved in together and started filming where they lived. Your Legacy Agent has four entries from 2014–2017. Ask them: what did Temperrr and Banks set up in Plainview in 2014? The word for that place is the code. (The signings and the trophy are decoys.)',
+      placeholder: 'Enter 5-letter word',
+      hints: [
+        'Your partner’s 2014 entry is the one about living, not competing.',
+        'The CS:GO signings are decoys — the answer is a place, not a player.',
+        'Think: what do you call a building a crew lives in together?',
+      ],
     },
-    answerHash: '68cf9218d6057b3d33d4d1631d5b24905d984ffd9411473bd7622506a70d66ec', // CLAN
-    answerLength: 4,
+    answerHash: '3e83712a5c41abe11cf75a9ff41a66059e3bf823421bbc6d7bd3797e83786ed8',
+    answerLength: 5,
     reveal: {
-      heading: 'VAULT LOG 02 — UNLOCKED',
-      body: 'Stage 2 complete. The cipher only worked because both of you shared what only you could see.',
-      timelineSlot: 'TIMELINE SLOT 2014–2018 — replace this text with the sponsor-provided official FaZe Clan timeline entry for this era.',
+      heading: 'VAULT LOG 02 — 2014–2017: THE SHARED ROOF AND THE SUPERTEAM',
+      body: '2014 — the first content house opens in Plainview, NY, and FaZe pivots from trickshot channel to lifestyle brand. Jan 2016 — FaZe buys G2’s CS:GO roster for ~$700K. Feb 2017 — NiKo signs for a reported ~$500K buyout. Oct 2017 — the superteam wins ELEAGUE CS:GO Premier, $500K, the highest-profile trophy of that year.',
+      source: SOURCE,
     },
   },
   {
     id: 3,
-    title: 'Stage 3 — The Final Vault',
-    subtitle: 'Decode the last dial and open the Blackbox.',
-    // SPLIT-KEY PUZZLE: neither player alone can solve this stage.
-    // Legacy holds letters 1, 3, 5 (as numbers); Recruit holds letters
-    // 2 and 4. The word only exists when both halves are interleaved:
-    // [Legacy 1] [Recruit 2] [Legacy 3] [Recruit 4] [Legacy 5].
-    // Stages 1–2 are interface-enforced instead (Legacy has the clue but
-    // no keypad; Recruit has the keypad but not the clue).
+    title: 'Stage 3 — The Crest',
+    subtitle: 'Count what the crest carries. Spell the total.',
+    // FINALE: neither player alone can know the total. Legacy counts
+    // the star wins in their list; Recruit counts theirs; the answer
+    // is the sum, spelled out. Each list mixes real star wins with
+    // decoys (festival titles, cumulative awards, runner-up finishes)
+    // that fail the rule: first place at the defining world event of
+    // its game. The answer word appears nowhere in either dossier.
     legacyClue: {
-      heading: 'FINAL DIAL — EYES ONLY: LEGACY AGENT',
-      body: 'You hold THREE of the five dial letters — positions 1, 3 and 5:',
-      detail: 'Position 1 = 22   •   Position 3 = 21   •   Position 5 = 20\n(A = 1, B = 2, … Z = 26.) Your Recruit holds positions 2 and 4, which you do NOT have. Read your three numbers to them — without their two letters, your half spells nothing.',
+      heading: 'THE RULE — EYES ONLY: LEGACY AGENT',
+      body: 'One mark on the crest for each first place at the defining world event of its game. A festival title does not count. A cumulative award does not count. A runner-up finish does not count. My wins, 2021–2023:',
+      detail:
+        '• Aug 22, 2021 — Atlanta FaZe win the Call of Duty League Championship, beating Toronto Ultra 5–3.\n' +
+        '• Feb 27, 2022 — FaZe win IEM Katowice, 3–0 over G2, $400,000.\n' +
+        '• May 22, 2022 — FaZe win the PGL Major in Antwerp, 2–0 over Natus Vincere, $500,000.\n' +
+        '• Mar 2023 — FaZe complete the Intel Grand Slam by winning ESL Pro League Season 17, $1,000,000.\n' +
+        '• Oct 15, 2023 — FaZe win the Halo World Championship, 4–0 over the defending champions OpTic, $400,000.\n' +
+        'Count how many of MY wins earned a mark. Your Recruit holds the recent wins — ask them for their count, add the two counts together, and spell the total.',
     },
     recruitPuzzle: {
-      heading: 'FINAL DIAL — NEW RECRUIT',
-      body: 'You hold TWO of the five dial letters — positions 2 and 4:',
-      detail: 'Position 2 = 1 (A)   •   Position 4 = 12 (L)\nYour Legacy Agent holds positions 1, 3 and 5, which you do NOT have. Ask them for their three numbers, convert each (A = 1 … Z = 26), then interleave them — [their 1] [your 2] [their 3] [your 4] [their 5] — and enter the 5-letter word to open the vault.',
-      placeholder: 'Enter 5-letter word',
-      hint: 'Hint: your two letters are A and L. The word is what you have been opening all along.',
+      heading: 'THE CREST — NEW RECRUIT',
+      body: 'The logo carries black marks above it, one per world title. My wins are the recent ones, 2024–2026. Count how many earned a mark.',
+      detail:
+        '• Aug 2024 — Atlanta FaZe win the Esports World Cup in Riyadh, 4–2 over 100 Thieves, $600,000.\n' +
+        '• Feb 16, 2025 — FaZe win the Six Invitational, 3–1 over Team BDS, $1,000,000.\n' +
+        '• Dec 2025 — FaZe reach the StarLadder Budapest Major final and lose 1–3 to Vitality, $170,000.\n' +
+        '• Feb 15, 2026 — FaZe win the Six Invitational again, 3–1 over Team Secret, $1,000,000 — the first organisation ever to defend it.\n' +
+        '• Aug 2026 — FaZe win the Rainbow Six title at the Esports World Cup in Paris, 3–1 over FURIA, $750,000.\n' +
+        'Count how many of MY wins earned a mark. Your Legacy Agent holds the older wins — ask them for their count, add the two counts together, and spell the total.',
+      placeholder: 'Enter 4-letter word',
+      hints: [
+        'A mark means first place at the one event that decides a world champion — not a festival, not a cumulative award, not a runner-up finish.',
+        'The Esports World Cup is a cross-game festival. The Intel Grand Slam is a cumulative award.',
+        'Your Legacy Agent should count three. You should count two. Add them, then spell the total.',
+      ],
     },
-    answerHash: 'e1c20be7b222031d9091b8ab95a5ce2b59e2ed514b86c2d1eaf064fd8abbd531', // VAULT
-    answerLength: 5,
+    answerHash: 'b35cf1ba111bbcf3a6f24755f22ed1346a8302aa62b9cf8ce82f8b5f2854eb83',
+    answerLength: 4,
     reveal: {
-      heading: 'THE BLACKBOX IS OPEN',
-      body: 'All three stages solved together. Neither of you could have done this alone — that is the point of FaZe Blackbox.',
-      timelineSlot: 'TIMELINE SLOT 2019–2026 — replace this text with the sponsor-provided official FaZe Clan timeline entry for this era.',
+      heading: 'THE BLACKBOX IS OPEN — THE FIVE STARS',
+      body: 'One star per world title: Aug 22, 2021 — Call of Duty League Championship (Atlanta FaZe). May 22, 2022 — PGL Major, Antwerp (Counter-Strike). Oct 15, 2023 — Halo World Championship. Feb 16, 2025 and Feb 15, 2026 — back-to-back Six Invitationals, the first organisation ever to defend one. The star mapping is reconstructed from the crest files and the results record — FaZe has never published a key to the stars.',
+      source: SOURCE + ' Star mapping: the timeline’s own reconstruction, not an official FaZe statement.',
     },
   },
 ]
