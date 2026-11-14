@@ -26,3 +26,14 @@ one-line change per stage with no gameplay change.
   primary FaZe Clan source the sponsor points to.
 - Anything else — including a plausible-sounding date or event — stays out
   until the sponsor confirms it.
+
+## What we need from the sponsor / team (requested 2026-11-14)
+
+Please send the official FaZe Clan 2010–2026 timeline — ideally one short
+entry per era (2010–2013, 2014–2018, 2019–2026), each with a date or year
+and one or two sentences. Once it arrives, the change is one string per
+stage (see the table above) plus one puzzle: Stage 3's split-key numbers
+can be re-keyed to a verified event (for example, a year or a name from
+the timeline) while keeping the same Legacy-holds-half / Recruit-holds-
+half structure. Until then, no historical content in the game has been
+changed, and no FaZe facts have been invented.

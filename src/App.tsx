@@ -141,7 +141,7 @@ export default function App() {
         <Game room={room} role={role} solo={solo} setRole={setRole} setRoom={setRoom} onComplete={() => setView('complete')} />
       )}
       {view === 'complete' && room && (
-        <Completion room={room} role={role} copy={copy} copied={copied} onAgain={leaveRoom} history={history} />
+        <Completion room={room} role={role} copy={copy} copied={copied} onAgain={leaveRoom} history={history} inviteLink={inviteLink} />
       )}
 
       <footer className="border-t border-faze-line py-6 text-center text-xs text-zinc-500">
@@ -180,6 +180,22 @@ function Landing(props: {
         </div>
       </section>
 
+      <section className="mx-auto max-w-4xl pb-14 text-center">
+        <h2 className="font-display text-2xl md:text-3xl">OLD FANS KNOW THE HISTORY. <span className="text-faze-red">NEW FANS UNLOCK THE FUTURE.</span></h2>
+        <p className="mx-auto mt-3 max-w-2xl text-zinc-300">FaZe has fans who lived its history — and a new generation just discovering it. Blackbox puts them on the same team.</p>
+        <div className="mt-6 grid gap-3 text-left md:grid-cols-2">
+          <div className="rounded-2xl border border-faze-line bg-faze-panel p-5">
+            <p className="font-mono text-xs font-bold text-faze-red">👤 LEGACY AGENT — THE RETURNING FAN</p>
+            <p className="mt-2 text-sm text-zinc-300">You know the history. You see the clues a new fan never could — and for the first time, that knowledge is the key to the game.</p>
+          </div>
+          <div className="rounded-2xl border border-faze-line bg-faze-panel p-5">
+            <p className="font-mono text-xs font-bold text-faze-red">🔓 NEW RECRUIT — THE NEW FAN</p>
+            <p className="mt-2 text-sm text-zinc-300">You hold the puzzle and the only keypad. You learn FaZe history by playing it — not by reading about it — because your partner has to teach it to you to win.</p>
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-zinc-400">Each player gets different information. Neither can solve a stage alone. Talking is the mechanic — and every conversation turns a new fan into a FaZe fan.</p>
+      </section>
+
       <section id="room-setup" className="mx-auto grid max-w-4xl scroll-mt-24 gap-6 pb-14 md:grid-cols-2">
         <div className="rounded-2xl border border-faze-line bg-faze-panel p-6 shadow-card">
           <h2 className="font-display text-xl">ENTER THE VAULT</h2>
@@ -195,13 +211,13 @@ function Landing(props: {
             <button onClick={props.onSolo} className="rounded-xl border border-faze-line px-4 py-2.5 text-sm text-zinc-300 hover:border-zinc-500">
               Practice solo (demo — see both sides, for judges testing alone)</button>
           </div>
-          <p className="mt-3 text-xs text-zinc-500">Creating a room gives you a unique 6-character code. Your partner joins with it and automatically takes the other role. Demo mode works with two tabs on this device; Supabase Realtime takes over when configured.</p>
+          <p className="mt-3 text-xs text-zinc-500">Creating a room gives you a unique 6-character code. Your partner joins with it and automatically takes the other role. Demo mode works with two tabs on this device; cross-device play needs Supabase configured and is not live yet.</p>
         </div>
 
         <div className="rounded-2xl border border-faze-line bg-faze-panel p-6 shadow-card">
           <h2 className="font-display text-xl">JOIN A ROOM</h2>
-          <label className="mt-4 block text-xs font-bold tracking-wider text-zinc-400">ROOM CODE (6 CHARACTERS)</label>
-          <input value={props.joinCode} onChange={(e) => props.setJoinCode(e.target.value.toUpperCase())} placeholder="e.g. K7Q2XA" maxLength={6}
+          <label htmlFor="room-code" className="mt-4 block text-xs font-bold tracking-wider text-zinc-400">ROOM CODE (6 CHARACTERS)</label>
+          <input id="room-code" value={props.joinCode} onChange={(e) => props.setJoinCode(e.target.value.toUpperCase())} placeholder="e.g. K7Q2XA" maxLength={6}
             className="mt-1 w-full rounded-lg border border-faze-line bg-black px-3 py-2.5 font-mono text-lg tracking-[0.3em]" />
           <button disabled={props.loading} onClick={props.onJoin} className="mt-4 w-full rounded-xl bg-white px-4 py-3 font-bold text-black disabled:opacity-50 hover:bg-zinc-200">
             {props.loading ? 'Joining…' : 'Join Room'}</button>
@@ -254,6 +270,29 @@ function Landing(props: {
           </div>
         )}
       </section>
+
+      <section className="pb-16">
+        <div className="rounded-2xl border border-faze-red/40 bg-gradient-to-b from-faze-red/10 to-faze-panel p-6 md:p-8">
+          <p className="font-mono text-xs font-bold tracking-widest text-faze-red">FOR JUDGES · PROPOSED MODEL — NOT AN EXISTING DEAL</p>
+          <h2 className="mt-2 font-display text-2xl md:text-3xl">THE BUSINESS BEHIND THE BLACKBOX</h2>
+          <p className="mt-3 max-w-3xl text-zinc-300">Blackbox turns attention into a weekly habit — and a weekly habit into revenue. Here is how we propose it works:</p>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-faze-line bg-black/40 p-4">
+              <p className="font-bold">1 · Sponsored episodes</p>
+              <p className="mt-1 text-sm text-zinc-400">Gaming and technology brands sponsor a weekly mystery episode. Their branding appears naturally inside the mission — as a clue, a prop, or a location — never as a banner fans ignore.</p>
+            </div>
+            <div className="rounded-xl border border-faze-line bg-black/40 p-4">
+              <p className="font-bold">2 · Rewards after the win</p>
+              <p className="mt-1 text-sm text-zinc-400">After completing an episode, players may unlock optional sponsor rewards or offers. Rewards come after the fun, so they feel earned — and players actually see them.</p>
+            </div>
+            <div className="rounded-xl border border-faze-line bg-black/40 p-4">
+              <p className="font-bold">3 · Measured, not guessed</p>
+              <p className="mt-1 text-sm text-zinc-400">FaZe could measure episode starts, completion rates, return visits, shares, and optional offer clicks — the numbers a sponsor needs to renew.</p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-zinc-500">Proposed monetization opportunities only. There are no existing sponsorship agreements and no actual revenue yet. All sponsor examples in this demo are hypothetical.</p>
+        </div>
+      </section>
     </main>
   )
 }
@@ -268,7 +307,7 @@ function Lobby(props: { room: RoomState; role: Role; inviteLink: string; copy: (
       <p className="mt-2 text-zinc-400">Share the code. When both agents are in, the vault opens automatically.</p>
       <div className="mx-auto mt-6 max-w-md rounded-2xl border border-faze-red/50 bg-faze-panel p-6 shadow-glow">
         <p className="text-xs font-bold tracking-widest text-zinc-400">ROOM CODE</p>
-        <p className="mt-1 font-mono text-5xl font-bold tracking-[0.25em]">{room.code}</p>
+        <p className="mt-1 font-mono text-4xl font-bold tracking-[0.25em] md:text-5xl">{room.code}</p>
         <div className="mt-4 flex justify-center gap-2">
           <button onClick={() => props.copy(room.code, 'code')} className="rounded-lg bg-white px-4 py-2 text-sm font-bold text-black">{props.copied === 'code' ? 'Copied!' : 'Copy code'}</button>
           <button onClick={() => props.copy(props.inviteLink, 'link')} className="rounded-lg border border-faze-line px-4 py-2 text-sm">{props.copied === 'link' ? 'Copied!' : 'Copy invite link'}</button>
@@ -412,7 +451,7 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
 }
 
 /* ---------------- Completion ---------------- */
-function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: string) => void; copied: string; onAgain: () => void; history: { code: string; ms: number; at: string }[] }) {
+function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: string) => void; copied: string; onAgain: () => void; history: { code: string; ms: number; at: string }[]; inviteLink: string }) {
   const { room } = props
   const totalMs = room.completedAt ? new Date(room.completedAt).getTime() - new Date(room.startedAt).getTime() : 0
   const totalAttempts = Object.values(room.attempts).reduce((a, b) => a + b, 0)
@@ -425,7 +464,8 @@ function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: s
       <div className={`vault-ring mx-auto grid h-40 w-40 place-items-center rounded-full ${unlocked ? 'vault-open' : ''}`}>
         <div className="grid h-32 w-32 place-items-center rounded-full bg-black"><span className="font-display text-5xl">🔓</span></div>
       </div>
-      <h1 className="mt-6 font-display text-4xl md:text-5xl"><span className="shimmer-text">THE VAULT IS OPEN</span></h1>
+      <p className="mt-6 inline-block rounded-full border border-green-500/60 bg-green-950/40 px-4 py-1 text-xs font-bold tracking-widest text-green-300">★ MISSION COMPLETE — 3 / 3 STAGES SOLVED TOGETHER</p>
+      <h1 className="mt-4 font-display text-4xl md:text-5xl"><span className="shimmer-text">THE VAULT IS OPEN</span></h1>
       <p className="mt-3 text-zinc-300">Room {room.code} · {room.legacyName} (Legacy) + {room.recruitName} (Recruit) · {fmt(totalMs)} · {totalAttempts} total attempts</p>
 
       <div className="mx-auto mt-6 max-w-md rounded-2xl border border-yellow-600/60 bg-gradient-to-b from-yellow-950/40 to-faze-panel p-6 text-left">
@@ -438,18 +478,27 @@ function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: s
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         <button onClick={() => props.copy(shareText, 'share')} className="rounded-xl bg-faze-red px-5 py-3 font-bold shadow-glow">{props.copied === 'share' ? 'Copied!' : 'Copy achievement to share'}</button>
         <button onClick={async () => { if (navigator.share) { try { await navigator.share({ title: 'FaZe Blackbox', text: shareText }) } catch { /* user cancelled */ } } else props.copy(shareText, 'share') }} className="rounded-xl border border-faze-line px-5 py-3 font-bold">Share…</button>
+        <button onClick={() => props.copy(props.inviteLink, 'invite')} className="rounded-xl border border-faze-red px-5 py-3 font-bold text-red-200">{props.copied === 'invite' ? 'Invite link copied!' : 'Invite a friend to play'}</button>
         <button onClick={props.onAgain} className="rounded-xl border border-faze-line px-5 py-3 font-bold">Play again — new room</button>
       </div>
 
-      <div className="mt-8 rounded-2xl border border-faze-line bg-faze-panel p-5 text-left">
-        <h2 className="font-display">WHAT’S NEXT — KEEP PLAYING</h2>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-300">
-          <li><b>Episode 02 — The Red Room Tapes</b> drops next week (hypothetical sponsored episode — see landing page).</li>
-          <li>Invite a new fan with your room code — every new Recruit is a new FaZe fan brought in by a longtime fan.</li>
-          <li>Your completed missions are saved on this device — see the landing page history.</li>
-        </ul>
-        <p className="mt-3 text-xs text-zinc-500">Revenue model (for judges): sponsored weekly episodes + premium fan experiences + merch partnerships + brand competitions. All partnerships shown in this demo are hypothetical / illustrative only.</p>
+      <div className="mt-8 grid gap-3 text-left md:grid-cols-2">
+        <div className="rounded-2xl border border-faze-red/50 bg-gradient-to-b from-faze-red/10 to-faze-panel p-5">
+          <p className="font-mono text-xs font-bold text-faze-red">NEXT WEEK · PREVIEW — NOT PLAYABLE YET</p>
+          <h2 className="mt-1 font-display text-lg">EPISODE 02 — THE RED ROOM TAPES</h2>
+          <p className="mt-2 text-sm text-zinc-300">A new vault, new clues, same rule: neither player can solve it alone. Episode 02 does not exist yet — this is a preview of the weekly format.</p>
+          <button disabled className="mt-3 cursor-not-allowed rounded-lg border border-faze-line px-3 py-2 text-sm text-zinc-500">Coming soon — not playable yet</button>
+        </div>
+        <div className="rounded-2xl border border-faze-line bg-faze-panel p-5">
+          <h2 className="font-display text-lg">WHY COME BACK?</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-300">
+            <li>A new episode drops every week — a reason to return, not a one-off game.</li>
+            <li>Invite a friend with your link: every new Recruit is a new FaZe fan brought in by a longtime fan.</li>
+            <li>Your completed missions are saved on this device — see your history on the landing page.</li>
+          </ul>
+        </div>
       </div>
+      <p className="mt-4 text-xs text-zinc-500">Revenue model (for judges): sponsored weekly episodes + premium fan experiences + merch partnerships + brand competitions. All partnerships shown in this demo are hypothetical / illustrative only — no existing sponsorships.</p>
     </main>
   )
 }
