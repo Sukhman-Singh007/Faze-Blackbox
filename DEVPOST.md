@@ -7,29 +7,32 @@
 FaZe Clan has longtime fans who lived its history and a new generation discovering it now — but nothing makes those two groups play *together*. We built a vault that only opens when both do.
 
 ## What it does
-A cooperative two-player mystery platform. A Legacy Agent (longtime fan) sees historical clues; a New Recruit (new fan) holds the locked puzzle and the only keypad. Neither can solve a stage alone. Three stages, real-time sync, historical reveals after each stage, a vault-unlock animation, and a shareable achievement. Weekly sponsored mystery episodes keep fans returning.
+A cooperative two-player mystery vault. A Legacy Agent (longtime fan) sees dated historical dossiers; a New Recruit (new fan) holds the question and the only keypad. Neither can solve a stage alone. Three stages, real historical reveals after each stage, a vault-unlock animation, and a shareable achievement. Weekly sponsored mystery episodes keep fans returning.
+
+The puzzles use real FaZe history from the sponsor-provided timeline "FaZe Clan: A Timeline, 2010–2026": the crew's founding as FaZe Sniping in May 2010, the first content house in Plainview in 2014, and the five world titles behind the stars on the crest (2021 CDL Championship, 2022 PGL Major Antwerp, 2023 Halo World Championship, back-to-back Six Invitationals 2025–2026). The finale asks both players to count the world-title wins in their own dossiers and combine the counts — neither side alone can know the answer.
 
 ## How we built it
-React 19 + Vite + TypeScript + Tailwind CSS, Supabase (PostgreSQL, Realtime, Edge Functions), deployed on Vercel. Rooms use unique 6-character codes. Answers are validated against SHA-256 hashes — in production by a Supabase Edge Function, so no plaintext answer or service key ever ships to the browser. Demo mode syncs two tabs via BroadcastChannel/localStorage so it plays with zero setup.
+React 19 + Vite + TypeScript + Tailwind CSS, deployed on Vercel. Rooms use unique 6-character codes. The live demo runs in demo-local mode: two tabs on one device sync via BroadcastChannel + localStorage, with session recovery if a player refreshes. Supabase code (PostgreSQL migration + answer-validation Edge Function) is in the repo; it is not configured on the live deployment, and cross-device play is not claimed. Answers are validated against SHA-256 hashes in the demo — never stored in plaintext in the client.
 
 ## Challenges we faced
-- Making cooperation *required*, not optional: we enforced it in the UI (Legacy has no keypad, Recruit cannot see the clue) instead of just suggesting it.
-- Real-time sync without credentials on demo day: built a local transport first, with Supabase Realtime as the configured backend.
-- Not inventing FaZe history: puzzle reveals are labelled timeline slots for the sponsor-provided 2010–2026 timeline.
+- Making cooperation *required*, not optional: the answer is split across both players' information, not just their screens. In the finale, Legacy counts 3 world titles and Recruit counts 2 — the answer only exists when both counts are combined.
+- Making puzzles solvable but not copyable: the Stage 2 answer word appears nowhere in either player's text, and the Stage 3 answer is a sum neither side can compute alone. A first-time player solved all three stages from the clues alone in live testing.
+- Not inventing FaZe history: every fact comes from the sponsor-provided 2010–2026 timeline, with source credits in the app. Sensitive material from the timeline (lawsuits, scandals, the 2025 exodus) was deliberately left out.
+- Real-time sync without credentials on demo day: built a local transport first, with Supabase as the next step — and wrote down honestly what is and isn't live.
 
 ## Accomplishments we're proud of
-A complete playable three-stage game, working two-player flow tested in two tabs, server-side validation design, and a revenue story (sponsored episodes) that fits the sponsor brief.
+A complete playable three-stage game with verified FaZe history, working two-player flow tested in two tabs, a finale that requires both players to reason (not just type), progressive hints, and a revenue story (sponsored episodes) that fits the sponsor brief. 21 unit tests pass, including tests that enforce the puzzle design rules.
 
 ## What we learned
-Asymmetric information is a stronger multiplayer mechanic than shared trivia; and a demo that works with no keys beats a backend that only works after setup.
+Asymmetric information is a stronger multiplayer mechanic than shared trivia; a demo that works with no keys beats a backend that only works after setup; and a hash of a four-letter word hides nothing — real security needs server-side validation.
 
 ## What's next
-Fill timeline slots with the official FaZe timeline, wire Supabase Realtime end-to-end in production, ship Episode 02 with a real sponsor, and add leaderboards + merch rewards.
+Wire Supabase Realtime end-to-end (rooms, server-side validation with hardened RLS, atomic stage progression), ship Episode 02 with a real sponsor, and add leaderboards + merch rewards.
 
 ## Built with
-React, Vite, TypeScript, Tailwind CSS, Supabase, PostgreSQL, Supabase Realtime, Vercel, GitHub.
+React, Vite, TypeScript, Tailwind CSS, Supabase, PostgreSQL, Vercel, GitHub.
 
 ## Links
-- GitHub: https://github.com/Sukhman-Singh007/faze-blackbox (create the empty public repo, then push — see DEPLOYMENT.md)
-- Live demo: <Vercel URL after deploy — see DEPLOYMENT.md>
-- Demo answers for judges: Stage 1 FAZE, Stage 2 CLAN, Stage 3 VAULT
+- GitHub: https://github.com/Sukhman-Singh007/Faze-Blackbox
+- Live demo: https://faze-blackbox.vercel.app
+- Demo answers for judges: Stage 1 SNIP, Stage 2 HOUSE, Stage 3 FIVE
