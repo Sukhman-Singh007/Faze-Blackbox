@@ -302,8 +302,10 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [reveal, setReveal] = useState<null | { heading: string; body: string; timelineSlot: string }>(null)
-  const [elapsed, setElapsed] = useState(0)
-  const startRef = useRef(Date.now())
+  // Timer is anchored to the room's startedAt (persisted in room state),
+  // not to this mount — so a refresh mid-game does not reset the clock.
+  const startRef = useRef(new Date(room.startedAt).getTime())
+  const [elapsed, setElapsed] = useState(() => Date.now() - startRef.current)
 
   useEffect(() => { const t = setInterval(() => setElapsed(Date.now() - startRef.current), 1000); return () => clearInterval(t) }, [])
   useEffect(() => { setGuess(''); setMsg('') }, [room.stage])
