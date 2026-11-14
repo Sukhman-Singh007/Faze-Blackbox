@@ -46,6 +46,12 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=...   # Edge Function only — NE
 
 Schema, RLS and the Edge Function are in `supabase/`. Answers are stored **only as SHA-256 hashes** — no plaintext answers in the client, and the service-role key never ships to the browser. When Supabase is configured, `validateAnswerServer()` is tried first and the client-side hash check is only the offline fallback.
 
+## Backend & security — what is actually running
+
+**Inspected 2026-11-14:** the deployed app uses **browser-local state only** — rooms live in `localStorage`, sync via `BroadcastChannel` + `storage` events (`src/lib/rooms.ts`). Supabase code, the migration and the Edge Function exist in the repo but are **not configured on the live deployment** (no `VITE_SUPABASE_URL` set), so **cross-device multiplayer has not been tested and is not claimed to work** — two tabs on one device is the tested path. True cross-device play requires the Supabase setup above (migration + `validate-answer` deploy + Vercel env vars + redeploy), after which rooms must move from `localStorage` to Supabase Realtime channels; that migration is deliberately not attempted in this bug-fix pass. No secret keys are in the repo or the client bundle (`.env.example` lists only public anon values; the service-role key is Edge-Function-only). Player seats are claimed by an opaque per-player token stored per-tab in `sessionStorage` (`src/lib/rooms.ts`), so a refresh restores the same seat and a stranger cannot take an occupied one.
+
+FaZe history: no official sponsor timeline is in the project — see `TIMELINE.md` for the exact insertion point. Nothing historical has been invented.
+
 ## Project structure
 
 ```

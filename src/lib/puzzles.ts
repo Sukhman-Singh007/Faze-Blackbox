@@ -75,17 +75,23 @@ export const STAGES: Stage[] = [
     id: 3,
     title: 'Stage 3 — The Final Vault',
     subtitle: 'Decode the last dial and open the Blackbox.',
+    // SPLIT-KEY PUZZLE: neither player alone can solve this stage.
+    // Legacy holds letters 1, 3, 5 (as numbers); Recruit holds letters
+    // 2 and 4. The word only exists when both halves are interleaved:
+    // [Legacy 1] [Recruit 2] [Legacy 3] [Recruit 4] [Legacy 5].
+    // Stages 1–2 are interface-enforced instead (Legacy has the clue but
+    // no keypad; Recruit has the keypad but not the clue).
     legacyClue: {
       heading: 'FINAL DIAL — EYES ONLY: LEGACY AGENT',
-      body: 'The final dial shows five numbers:',
-      detail: '22  –  1  –  21  –  12  –  20\n(A = 1, B = 2, … Z = 26.) Read the numbers to your Recruit. This is the last lock — the vault opens on the correct word.',
+      body: 'You hold THREE of the five dial letters — positions 1, 3 and 5:',
+      detail: 'Position 1 = 22   •   Position 3 = 21   •   Position 5 = 20\n(A = 1, B = 2, … Z = 26.) Your Recruit holds positions 2 and 4, which you do NOT have. Read your three numbers to them — without their two letters, your half spells nothing.',
     },
     recruitPuzzle: {
       heading: 'FINAL DIAL — NEW RECRUIT',
-      body: 'Five numbers. One word. The vault is listening:',
-      detail: 'A = 1  •  B = 2  •  …  •  Z = 26\nYour Legacy Agent has the five dial numbers. Ask them for each one, convert it to a letter, then enter the 5-letter word to open the vault.',
+      body: 'You hold TWO of the five dial letters — positions 2 and 4:',
+      detail: 'Position 2 = 1 (A)   •   Position 4 = 12 (L)\nYour Legacy Agent holds positions 1, 3 and 5, which you do NOT have. Ask them for their three numbers, convert each (A = 1 … Z = 26), then interleave them — [their 1] [your 2] [their 3] [your 4] [their 5] — and enter the 5-letter word to open the vault.',
       placeholder: 'Enter 5-letter word',
-      hint: 'Hint: 22 is V. The word is what you have been opening all along.',
+      hint: 'Hint: your two letters are A and L. The word is what you have been opening all along.',
     },
     answerHash: 'e1c20be7b222031d9091b8ab95a5ce2b59e2ed514b86c2d1eaf064fd8abbd531', // VAULT
     answerLength: 5,

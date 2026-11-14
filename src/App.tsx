@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { STAGES, validateAnswer, type Role } from './lib/puzzles'
-import { roomStore, recordCompletion, getHistory, type RoomState } from './lib/rooms'
+import { roomStore, recordCompletion, getHistory, newPlayerId, saveSession, loadSession, clearSession, ownsSeat, type RoomState } from './lib/rooms'
 import { validateAnswerServer } from './lib/supabase'
 
 type View = 'landing' | 'lobby' | 'game' | 'complete'
@@ -27,6 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState('')
   const [showEpisodes, setShowEpisodes] = useState(false)
+  const [playerId, setPlayerId] = useState(() => loadSession()?.playerId ?? newPlayerId())
   const history = useMemo(() => getHistory(), [view])
 
   const inviteLink = room ? `${window.location.origin}${window.location.pathname}?room=${room.code}` : ''
@@ -42,13 +43,32 @@ export default function App() {
     if (c) setJoinCode(c.toUpperCase())
   }, [])
 
-  // Live sync: subscribe to room updates (BroadcastChannel + storage events)
+  // Refresh / reconnect: restore this tab's saved seat (sessionStorage is
+  // per-tab, so a second tab is a different player, not the same session).
+  // Only restores when the session actually owns a seat in the room —
+  // an unrelated user can never take an occupied seat this way.
+  useEffect(() => {
+    const s = loadSession()
+    if (!s) return
+    const r = roomStore.load(s.code)
+    if (r && ownsSeat(r, s.role, s)) {
+      setName(s.name); setRole(s.role); setSolo(s.solo); setPlayerId(s.playerId); setRoom(r)
+      setView(r.status === 'completed' ? 'complete' : r.status === 'playing' ? 'game' : 'lobby')
+    } else {
+      clearSession()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Live sync: subscribe to room updates (BroadcastChannel + storage events).
+  // Functional setView calls avoid the stale-`view` closure that could
+  // miss the lobby -> game transition, and make a duplicate start a no-op.
   useEffect(() => {
     if (!room) return
     const unsub = roomStore.subscribe(room.code, (r) => {
       setRoom(r)
-      if (r.status === 'playing' && view === 'lobby') setView('game')
-      if (r.status === 'completed' && view !== 'complete') setView('complete')
+      if (r.status === 'playing') setView((prev) => (prev === 'lobby' ? 'game' : prev))
+      if (r.status === 'completed') setView((prev) => (prev === 'complete' ? prev : 'complete'))
     })
     return unsub
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,7 +78,8 @@ export default function App() {
     if (!name.trim()) { setError('Enter your agent name first.'); return }
     setError(''); setLoading(true)
     await new Promise((r) => setTimeout(r, 350)) // visible loading state
-    const r = roomStore.create(name.trim(), pickedRole)
+    const { room: r, playerId: pid } = roomStore.create(name.trim(), pickedRole, playerId)
+    setPlayerId(pid); saveSession({ code: r.code, role: pickedRole, name: name.trim(), playerId: pid, solo: false })
     setRole(pickedRole); setRoom(r); setLoading(false); setView('lobby')
   }
 
@@ -68,9 +89,10 @@ export default function App() {
     if (code.length !== 6) { setError('Room codes are 6 characters — check the code and try again.'); return }
     setError(''); setLoading(true)
     await new Promise((r) => setTimeout(r, 350))
-    const res = roomStore.join(code, name.trim())
+    const res = roomStore.join(code, name.trim(), playerId)
     setLoading(false)
     if ('error' in res) { setError(res.error); return }
+    setPlayerId(res.playerId); saveSession({ code: res.room.code, role: res.role, name: name.trim(), playerId: res.playerId, solo: false })
     setRole(res.role); setRoom(res.room)
     setView(res.room.status === 'playing' ? 'game' : 'lobby')
   }
@@ -78,12 +100,14 @@ export default function App() {
   function startSolo() {
     if (!name.trim()) { setError('Enter your agent name first — solo practice still needs a name.'); return }
     setError(''); setSolo(true)
-    const r = roomStore.create(name.trim(), 'legacy')
-    r.legacyJoined = true; r.recruitJoined = true; r.recruitName = name.trim() + ' (solo)'; r.status = 'playing'
-    roomStore.save(r); setRole('legacy'); setRoom(r); setView('game')
+    const { room: r, playerId: pid } = roomStore.create(name.trim(), 'legacy', playerId)
+    r.legacyJoined = true; r.recruitJoined = true; r.recruitName = name.trim() + ' (solo)'; r.recruitPlayerId = pid; r.status = 'playing'
+    roomStore.save(r); setPlayerId(pid); saveSession({ code: r.code, role: 'legacy', name: name.trim(), playerId: pid, solo: true })
+    setRole('legacy'); setRoom(r); setView('game')
   }
 
   function leaveRoom() {
+    clearSession()
     setRoom(null); setSolo(false); setView('landing'); setError(''); setJoinCode('')
   }
 
@@ -156,11 +180,11 @@ function Landing(props: {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-4xl gap-6 pb-14 md:grid-cols-2">
+      <section id="room-setup" className="mx-auto grid max-w-4xl scroll-mt-24 gap-6 pb-14 md:grid-cols-2">
         <div className="rounded-2xl border border-faze-line bg-faze-panel p-6 shadow-card">
           <h2 className="font-display text-xl">ENTER THE VAULT</h2>
-          <label className="mt-4 block text-xs font-bold tracking-wider text-zinc-400">YOUR AGENT NAME</label>
-          <input value={props.name} onChange={(e) => props.setName(e.target.value)} placeholder="e.g. Sukhman" maxLength={24}
+          <label htmlFor="agent-name" className="mt-4 block text-xs font-bold tracking-wider text-zinc-400">YOUR AGENT NAME</label>
+          <input id="agent-name" value={props.name} onChange={(e) => props.setName(e.target.value)} placeholder="e.g. Sukhman" maxLength={24}
             className="mt-1 w-full rounded-lg border border-faze-line bg-black px-3 py-2.5" />
           {props.error && <p role="alert" className="mt-3 rounded-lg bg-red-950/60 border border-red-800 px-3 py-2 text-sm text-red-200">{props.error}</p>}
           <div className="mt-4 grid gap-2">
@@ -208,7 +232,14 @@ function Landing(props: {
                 <p className="mt-1 text-sm text-zinc-300">{ep.status}</p>
                 <p className="mt-2 text-xs text-zinc-500">{ep.sponsor}</p>
                 {ep.live
-                  ? <button onClick={() => document.querySelector<HTMLInputElement>('input')?.focus()} className="mt-3 rounded-lg bg-faze-red px-3 py-2 text-sm font-bold">Play Episode 01</button>
+                  ? <button onClick={() => {
+                      // Was: document.querySelector('input')?.focus() — focused
+                      // an off-screen field with no visible navigation.
+                      // Now: smooth-scroll to the room setup panel first,
+                      // then focus the agent-name field once it is in view.
+                      document.getElementById('room-setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      window.setTimeout(() => document.getElementById('agent-name')?.focus({ preventScroll: true }), 450)
+                    }} className="mt-3 rounded-lg bg-faze-red px-3 py-2 text-sm font-bold">Play Episode 01</button>
                   : <button disabled className="mt-3 cursor-not-allowed rounded-lg border border-faze-line px-3 py-2 text-sm text-zinc-500">Notify me — coming soon</button>}
               </article>
             ))}

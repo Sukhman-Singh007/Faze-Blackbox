@@ -10,6 +10,8 @@ create table if not exists public.rooms (
   recruit_joined boolean not null default false,
   legacy_name text not null default '',
   recruit_name text not null default '',
+  legacy_player_id text not null default '',
+  recruit_player_id text not null default '',
   attempts jsonb not null default '{}'::jsonb,
   solved_at jsonb not null default '{}'::jsonb,
   started_at timestamptz not null default now(),
