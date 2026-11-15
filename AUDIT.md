@@ -1,5 +1,7 @@
 # FaZe Blackbox — Phase 1 Audit (2026-11-14)
 
+> **Status note (2026-11-15):** this is the Phase 1 snapshot, written before Phases 2–8. Two things in it are now stale — §2.2 and §4 describe the original puzzles (answers FAZE / CLAN / VAULT), which Phase 3 replaced with SNIP / HOUSE / FIVE (`src/lib/puzzles.ts`, `TIMELINE.md`); and §1's "17/17 unit tests" is now **65 tests, all passing** (verified 2026-11-15, `npm test`). The §3 misleading-claim items were addressed in the Phase 8 docs rewrite. The security findings in §2 still stand and are the basis for the Supabase phase.
+
 Audited by Mica (lead designer / engineer / QA). Live site verified 200 at
 https://faze-blackbox.vercel.app/ during this audit. Timeline source:
 official sponsor doc "FaZe Clan: A Timeline, 2010–2026"

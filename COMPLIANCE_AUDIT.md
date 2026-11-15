@@ -13,18 +13,24 @@ The task states the official rule as: project code, design assets, and build wor
 
 ### Git history (local repo `~/workspace/faze-blackbox/`, branch `main`)
 
-| Commit | Author date (CST) | Committer date (CST) | Subject |
-|---|---|---|---|
-| `260f28c` | 2026-11-14 14:50:16 | 2026-11-14 14:50:16 | FaZe Blackbox: complete playable 3-stage co-op mystery vault |
-| `35e280a` | 2026-11-14 14:54:09 | 2026-11-14 14:54:09 | Remove unused binary hero asset |
-| `84efb88` | 2026-11-14 15:45:21 | 2026-11-14 15:45:21 | Fix recruit-host start bug, refresh/reconnect sessions, Episode 01 scroll, Stage 3 split-key puzzle |
-| `6656581` | 2026-11-14 15:48:42 | 2026-11-14 15:48:42 | Anchor game timer to room startedAt |
-| `063401b` | 2026-11-14 16:05:31 | 2026-11-14 16:05:31 | Final polish: audience + business sections, upgraded victory screen, JUDGING_DEMO.md, a11y/mobile fixes |
-| `e833034` | 2026-11-14 16:30:36 | 2026-11-14 16:30:36 | Phase 2+3+4: verified FaZe history, redesigned puzzles (SNIP/HOUSE/FIVE), progressive hints, visual + a11y polish |
-| `b7b591a` | 2026-11-14 16:34:19 | 2026-11-14 16:34:19 | Phase 8: rewrite README, DEVPOST and JUDGING_DEMO to match the real product |
+> **Update 2026-11-15 ~10:40 CST:** the table below replaces the one in the original audit. The original table listed pre-push local commit hashes (e.g. `260f28c`, `b7b591a`) that were re-created before the first push; the hashes below are the current history on `main`, verified with `git log --first-parent` (author date == committer date on every commit, no rebasing, no rewritten history, no backdated commits). All commits are inside the window.
+
+| Commit | Date (CST) | Subject |
+|---|---|---|
+| `bea02fa` | 2026-11-14 14:54 | Initial commit |
+| `f913b20` | 2026-11-14 14:55 | FaZe Blackbox: complete playable 3-stage co-op mystery vault |
+| `6949153` | 2026-11-14 15:46 | Fix recruit-host start bug, refresh/reconnect sessions, Episode 01 scroll, Stage 3 split-key puzzle |
+| `7cae0f1` | 2026-11-14 15:49 | Anchor game timer to room startedAt |
+| `1ae800d` | 2026-11-14 16:13 | Final polish: audience + business sections, upgraded victory screen, JUDGING_DEMO.md, a11y/mobile fixes |
+| `c4aba7e` | 2026-11-14 16:31 | Phase 2+3+4: verified FaZe history, redesigned puzzles (SNIP/HOUSE/FIVE), progressive hints, visual + a11y polish |
+| `0a833df` | 2026-11-14 16:36 | Phase 8: rewrite README, DEVPOST and JUDGING_DEMO to match the real product |
+| `1725f10` | 2026-11-14 18:58 | Fix gameplay timer, fresh-room invite, victory screen honesty + judging docs |
+| `4cf4fed` | 2026-11-14 19:06 | Fix cross-tab broadcast leak, invite copy feedback, solo wording |
+| `793bca1` | 2026-11-14 20:34 | Add Daily Match Point, Sports Quick Play, Saturday Challenge, friend challenges, Creator Pack |
+| `1ae70bb` | 2026-11-14 23:56 | Merge pull request #1 from Sukhman-Singh007/fix/judging-demo-qa (PR branch commits `75112c6` 22:29, `5c570fc` 23:12) |
 
 - Author date == committer date on every commit. No rebasing, no rewritten history, no backdated commits.
-- First commit (14:50) contains the full initial app (29 files, incl. `package-lock.json`, `src/App.tsx`, `src/lib/puzzles.ts`, `src/lib/rooms.ts`, Supabase migration + Edge Function, tests, docs). All of it was written between the project directory's creation and that commit (see below).
+- First commit (14:54) is the empty initial commit; the full app lands in `f913b20` (14:55). All of it was written between the project directory's creation and that commit (see below).
 
 ### Filesystem evidence
 
@@ -35,7 +41,7 @@ The task states the official rule as: project code, design assets, and build wor
 ### GitHub evidence (public API, `api.github.com/repos/Sukhman-Singh007/Faze-Blackbox`)
 
 - Repo **created 2026-11-14T20:53:39Z = 14:53:39 CST** — inside the window.
-- Last push 2026-11-14T22:36:16Z = 16:36 CST. Default branch `main`, public, not a fork, not a template.
+- Last push **2026-11-15T05:56:10Z = 2026-11-14 23:56:10 CST** (merge of PR #1) — inside the window. Default branch `main`, public, not a fork, not a template.
 - Repo description is empty (`null`) — cosmetic; the Devpost submission carries the description.
 
 **Conclusion on timing:** everything in the repository — code, docs, and assets — was created inside the stated hacking window. No pre-window project work was found.
@@ -62,7 +68,7 @@ Whether HackUTA/MLH requires AI-assisted work to be **disclosed** in the submiss
 | Submission deadline | **Verified: Sun Nov 15, 2026, 12:00 PM CST** | Devpost "My hackathon projects" page, screenshotted by Sukhman 2026-11-14 16:42 CST: "Deadline Nov 15, 2026 @ 12:00pm CST", "19 more hours to deadline". (Earlier working assumption of Sat 11:59 PM was wrong — corrected.) |
 | Hacking window (Nov 14 noon – Nov 15 noon) | Stated in the task; consistent with the noon deadline. Not independently re-verified against a published rules page. | — |
 | Devpost submission fields | **Verified by direct inspection of the live form** | Project name (60 chars), elevator pitch (200 chars), thumbnail (optional), About the project (Markdown, required), Built with (tags, required), Try it out links, Project Media (optional), **Video demo link — YouTube or Vimeo URL (required)**. No sponsor-track selector appeared anywhere in the form Sukhman has filled so far. |
-| Video requirement | **Verified: a video demo link is required** | Form field "Video demo link (required)". Sukhman began recording a ~2-minute screen-recording playthrough at ~16:54 CST on 2026-11-14 (in-window). **As of this audit it is not confirmed uploaded or linked.** This is the last open submission item. |
+| Video requirement | **Verified: a video demo link is required** | Form field "Video demo link (required)". Sukhman began recording a ~2-minute screen-recording playthrough at ~16:54 CST on 2026-11-14 (in-window). **Update 2026-11-15 ~09:00 CST:** the final narrated demo video is built and ready — `FaZe_Blackbox_Final_Demo.mp4`, 2:55, 1920×1080, two voice-overs reading the team's exact script, verified end to end (all 379 words transcribed, no clipping). It still needs to be uploaded to YouTube (unlisted) and the link pasted into Devpost. **This is the last open submission item.** |
 | Code-link requirement | **Verified as satisfied in the form** | GitHub URL https://github.com/Sukhman-Singh007/Faze-Blackbox entered in "Try it out" links; repo is public. |
 | Sponsor-track selection | **UNVERIFIED** | No track selector seen in the Devpost form. Unknown whether FaZe-track selection happens on Devpost, at check-in, or at judging. **Needs organizer confirmation.** |
 | Judging attendance requirements | **UNVERIFIED** | hackuta.com fetched 2026-11-14 returns only a partial page (schedule section did not render in text). No judging time, location, or attendance rule confirmed. A third-party listing (HackathonRadar) gives event hours 2026-11-14T14:00Z–2026-11-15T22:30Z, which does not match the noon–noon window — treated as unreliable, not as evidence. **Needs organizer confirmation.** |
@@ -77,7 +83,7 @@ Sukhman's Devpost draft as filled so far (name, pitch, story, tags, links) match
 - ✅ Title/tagline, links (GitHub + live demo), Built-with tags (React, Vite, TypeScript, Tailwind CSS, Supabase, PostgreSQL, Vercel, GitHub) — all accurate.
 - ✅ "How we built it" states the demo is browser-local, Supabase is not configured on the live deployment, and cross-device play is not claimed.
 - ⚠️ **"Answers are validated against SHA-256 hashes in the demo"** is true but incomplete: validation is **fail-open** — `App.tsx` `submit()` uses `server ?? clientHash`, so any Supabase error falls back to the client hash (documented in `AUDIT.md`). The Devpost text does not claim server validation, so it is not false, but the honest framing is "demo-grade client-side hash check only".
-- ⚠️ **"21 unit tests pass"** — was true at the last run (2026-11-14 ~16:30). Must be re-verified after the timer/invite fixes (planned in the test pass).
+- ⚠️ **"21 unit tests pass"** — was true at the last run (2026-11-14 ~16:30). **Update 2026-11-15 ~10:38 CST: 65 tests pass** (`npm test`, 7 test files, 65/65) — the README and DEVPOST now state 65.
 - ⚠️ **"A first-time player solved all three stages from the clues alone in live testing"** — true (2026-11-14 ~16:31 browser E2E, 8/8 steps PASS). Keep.
 - ✅ No invented sponsors, stats, user counts, or revenue anywhere in the submission text. Revenue is labelled proposed/hypothetical.
 - ❌ **Submission is NOT yet submitted.** Remaining: upload the demo video to YouTube (unlisted) and paste the link, then Save & submit before **Sun Nov 15, 12:00 PM CST**.
@@ -148,18 +154,18 @@ Ask the organizers (hello@hackuta.org / HackUTA Discord / Devpost event page) �
 6. Full test pass: unit tests, `tsc`, production build, live browser E2E (both host-role combinations, all puzzles, wrong answers, progressive hints, refresh/session recovery, timer accuracy, completion screen, new-room invite, mobile layout, keyboard usability). Report pass / fail / untested separately.
 7. Push verified changes to GitHub; verify Vercel redeploy. Do not deploy untested changes.
 
-**Biggest open risk right now:** the Devpost submission is still a draft — the demo video is not yet uploaded or linked, and the submission is not submitted. Deadline is **Sun Nov 15, 12:00 PM CST** (~17.5 hours from this audit).
+**Biggest open risk right now:** the Devpost submission is still a draft — the demo video is built and ready (see §2) but is not yet uploaded or linked, and the submission is not submitted. Deadline is **Sun Nov 15, 12:00 PM CST**.
 
 ---
 
 ## 7. Update — fixes approved and implemented (2026-11-14 ~19:00 CST)
 
-Sukhman approved "fix the timer, invite, and victory screen, then test everything" (2026-11-14 18:50 CST). Implemented, unit-tested (25/25 pass, `tsc` clean, production build clean), and verified in live browser E2E (see test report in the final message):
+Sukhman approved "fix the timer, invite, and victory screen, then test everything" (2026-11-14 18:50 CST). Implemented, unit-tested (25/25 pass at the time, `tsc` clean, production build clean), and verified in live browser E2E (see test report in the final message). **Update 2026-11-15 ~10:38 CST: the suite has since grown to 65 tests, all passing** (`npm test`, 7 files, 65/65).
 
 - **Timer (§4a):** `gameStartedAt` added to `RoomState`, set when the second seat fills (both host-role combinations) or solo starts; `gameElapsedMs()` returns 0 in the lobby, runs during play, freezes at `completedAt`, and falls back to `startedAt` only for pre-fix completed rooms. The in-game clock and completion screen both use it, so both players see the same number. A lobby-wait regression test covers the 82:29 case directly.
 - **Invite (§4b):** the completion screen's invite now creates a fresh room (same player, same role), copies the new invite link, and takes the player to the new room's lobby. The finished room's code stays unjoinable.
 - **Victory screen (§4c):** "Verified by room state" → "Mission completed together"; added a concise historical finale (five stars); the vault animation now also swings the padlock shackle open and shows an UNLOCKED badge; share text and achievement card are honest in solo practice too ("in solo practice" instead of "with my partner / 0 solo solves").
-- **Docs:** `DEVPOST.md` (25 tests, honest hash framing, timer/invite fixes noted), `README.md` (25 tests, timer + fresh-room invite documented), `JUDGING_DEMO.md` (judging-criteria table + 3–4 min presentation script) updated.
+- **Docs:** `DEVPOST.md` (65 tests, honest hash framing, timer/invite fixes noted), `README.md` (65 tests, timer + fresh-room invite documented), `JUDGING_DEMO.md` (judging-criteria table + 3–4 min presentation script) updated.
 - **Still open (unchanged):** the five organizer questions in §5, and the Devpost video link + submission itself.
 
 ---

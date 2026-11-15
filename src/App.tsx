@@ -386,7 +386,7 @@ export default function App() {
       )}
 
       <footer className="border-t border-faze-line py-6 text-center text-xs text-zinc-500">
-        FaZe Blackbox · A student project for HackUTA 2026.{' '}
+        FaZe Blackbox · An independent student project for HackUTA 2026 — not an official FaZe Clan product.{' '}
         <a className="underline" href="https://docs.google.com/document/d/1HI-h6v38zGZaYzV_yc1G7u0NIec8pBerYdqO3z6mjQ4/edit" target="_blank" rel="noreferrer">FaZe Clan timeline</a>
         {'. Sponsorships and prizes are examples.'}
       </footer>

@@ -19,7 +19,7 @@
 7. **If a judge refreshes mid-game:** the session restores to the same stage — that was a bug we fixed, and it is safe to demo.
 8. **If a judge re-enters a finished room code:** it says "That room already finished its mission. Create a new room to play again." — completed rooms can't be replayed as fresh games.
 
-Solo fallback if only one screen is available: **Practice solo** on the landing page shows both sides with a role switcher. Stuck? Each stage has a "Need a hint?" button with three progressive hints.
+Solo fallback if only one screen is available: **Play the vault solo** on the landing page shows both sides with a role switcher. Stuck? Each stage has a "Need a hint?" button with three progressive hints.
 
 ## Daily Match Point demo (45 seconds)
 
