@@ -127,6 +127,22 @@ describe('gameplay timer (gameStartedAt)', () => {
     const done = { ...r, gameStartedAt: null, status: 'completed' as const, completedAt: new Date(new Date(r.startedAt).getTime() + 60_000).toISOString() }
     expect(gameElapsedMs(done)).toBe(60_000)
   })
+
+  it('a matchpoint room starts with a fresh match (6 credits, round 1, play phase)', () => {
+    const store = new RoomStore()
+    const { room } = store.create('A', 'legacy', 'p1', 'matchpoint', 'stackers', 'mp-2026-11-14')
+    expect(room.mode).toBe('matchpoint')
+    expect(room.match).toBeDefined()
+    expect(room.match!.scenarioId).toBe('stackers')
+    expect(room.match!.challengeId).toBe('mp-2026-11-14')
+    expect(room.match!.credits).toBe(6)
+    expect(room.match!.round).toBe(1)
+    expect(room.match!.phase).toBe('play')
+    // Vault rooms have no match state.
+    const vault = store.create('B', 'legacy', 'p2')
+    expect(vault.room.mode).toBe('vault')
+    expect(vault.room.match).toBeUndefined()
+  })
 })
 
 describe('broadcast isolation (cross-tab leak)', () => {

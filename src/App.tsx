@@ -1,9 +1,35 @@
 import { useEffect, useMemo, useState } from 'react'
 import { STAGES, validateAnswer, type Role } from './lib/puzzles'
-import { roomStore, recordCompletion, getHistory, newPlayerId, saveSession, loadSession, clearSession, ownsSeat, gameElapsedMs, type RoomState } from './lib/rooms'
+import { roomStore, recordCompletion, getHistory, newPlayerId, saveSession, loadSession, clearSession, ownsSeat, gameElapsedMs, type RoomState, type RoomMode } from './lib/rooms'
 import { validateAnswerServer } from './lib/supabase'
+import {
+  dailyScenario, dailyChallengeId, getScenario, scenarioForDailyId, newMatchState,
+  lockPlay, continueMatch, timeoutMatch, matchScore, MATCH_SECONDS,
+  type MatchState, type PlayId, type Scenario,
+} from './lib/matchpoint'
+import { utcDateStr } from './lib/matchpoint'
+import { QP_CATEGORIES, type QPCategory } from './lib/quickplay'
+import { parseChallenge, challengeId, challengeUrl } from './lib/challenges'
+import { saturdayScenario, saturdayWeekId, isSaturdayOpen, saveSaturdayBest } from './lib/saturday'
+import { DISCORD_INVITE_URL } from './lib/config'
+import { incStat } from './lib/stats'
+import { MatchPointGame } from './components/MatchPointGame'
+import { QuickPlayGame } from './components/QuickPlayGame'
+import { SaturdayCard } from './components/SaturdayCard'
+import { PackCard } from './components/PackCard'
 
-type View = 'landing' | 'lobby' | 'game' | 'complete'
+type View = 'landing' | 'lobby' | 'game' | 'complete' | 'quickplay' | 'localmatch'
+
+/** A local (no-room) Match Point run: challenge links, Saturday, pack
+ *  sample. Solo with a role switcher; the friend who opens the link
+ *  starts their own independent run on the same challenge. */
+interface LocalMatch {
+  scenarioId: string
+  challengeId: string
+  kind: 'daily' | 'saturday' | 'pack' | 'challenge'
+  weekId?: string
+  preview?: boolean
+}
 
 const EPISODES = [
   { week: 'EP 01 — OUT NOW', title: 'The First Key', status: 'Playable now', sponsor: 'Community episode — no sponsor yet', live: true },
@@ -28,7 +54,11 @@ export default function App() {
   const [copied, setCopied] = useState('')
   const [showEpisodes, setShowEpisodes] = useState(false)
   const [playerId, setPlayerId] = useState(() => loadSession()?.playerId ?? newPlayerId())
+  const [localMatch, setLocalMatch] = useState<LocalMatch | null>(null)
+  const [qp, setQp] = useState<{ category: QPCategory; dateStr: string } | null>(null)
   const history = useMemo(() => getHistory(), [view])
+  const today = useMemo(() => dailyScenario(), [])
+  const todayId = useMemo(() => dailyChallengeId(), [])
 
   const inviteLink = room ? `${window.location.origin}${window.location.pathname}?room=${room.code}` : ''
 
@@ -37,9 +67,37 @@ export default function App() {
     catch { setError('Copy failed — select and copy the text manually.'); }
   }
 
-  // Deep link: ?room=XXXXXX pre-fills join
+  // Deep links: ?challenge=<id> starts an independent run on that
+  // challenge (a friend's link — same scenario, fresh run, no answers
+  // in the link). ?room=XXXXXX pre-fills join for the vault / Match
+  // Point rooms.
   useEffect(() => {
-    const c = new URLSearchParams(window.location.search).get('room')
+    const params = new URLSearchParams(window.location.search)
+    const ch = params.get('challenge')
+    if (ch) {
+      const ref = parseChallenge(ch)
+      if (ref) {
+        clearSession() // a challenge link starts a fresh independent run
+        if (ref.kind === 'qp') {
+          setQp({ category: ref.category, dateStr: ref.date })
+          setView('quickplay')
+        } else if (ref.kind === 'mp-daily') {
+          const sc = scenarioForDailyId(ch)
+          if (sc) { setLocalMatch({ scenarioId: sc.id, challengeId: ch, kind: 'challenge' }); setView('localmatch') }
+        } else if (ref.kind === 'mp-scen') {
+          if (getScenario(ref.scenarioId)) {
+            setLocalMatch({ scenarioId: ref.scenarioId, challengeId: ch, kind: 'challenge' })
+            setView('localmatch')
+          }
+        } else if (ref.kind === 'sat') {
+          const sc = saturdayScenario(new Date(`${ref.weekId}T12:00:00.000Z`))
+          setLocalMatch({ scenarioId: sc.id, challengeId: ch, kind: 'saturday', weekId: ref.weekId, preview: !isSaturdayOpen() })
+          setView('localmatch')
+        }
+      }
+      return
+    }
+    const c = params.get('room')
     if (c) setJoinCode(c.toUpperCase())
   }, [])
 
@@ -48,6 +106,8 @@ export default function App() {
   // Only restores when the session actually owns a seat in the room —
   // an unrelated user can never take an occupied seat this way.
   useEffect(() => {
+    // A challenge link owns this visit — never restore a vault seat over it.
+    if (new URLSearchParams(window.location.search).get('challenge')) return
     const s = loadSession()
     if (!s) return
     const r = roomStore.load(s.code)
@@ -74,11 +134,14 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?.code])
 
-  async function handleCreate(pickedRole: Role) {
+  async function handleCreate(pickedRole: Role, mode: RoomMode = 'vault', scenarioId = '') {
     if (!name.trim()) { setError('Enter your agent name first.'); return }
     setError(''); setLoading(true)
     await new Promise((r) => setTimeout(r, 350)) // visible loading state
-    const { room: r, playerId: pid } = roomStore.create(name.trim(), pickedRole, playerId)
+    const { room: r, playerId: pid } = roomStore.create(
+      name.trim(), pickedRole, playerId, mode, scenarioId, mode === 'matchpoint' ? todayId : '',
+    )
+    if (mode === 'matchpoint') incStat('mpStarts')
     setPlayerId(pid); saveSession({ code: r.code, role: pickedRole, name: name.trim(), playerId: pid, solo: false })
     setRole(pickedRole); setRoom(r); setLoading(false); setView('lobby')
   }
@@ -97,14 +160,49 @@ export default function App() {
     setView(res.room.status === 'playing' ? 'game' : 'lobby')
   }
 
-  function startSolo() {
+  function startSolo(mode: RoomMode = 'vault', scenarioId = '') {
     if (!name.trim()) { setError('Enter your agent name first — solo practice still needs a name.'); return }
     setError(''); setSolo(true)
-    const { room: r, playerId: pid } = roomStore.create(name.trim(), 'legacy', playerId)
+    const { room: r, playerId: pid } = roomStore.create(
+      name.trim(), 'legacy', playerId, mode, scenarioId, mode === 'matchpoint' ? todayId : '',
+    )
+    if (mode === 'matchpoint') incStat('mpStarts')
     r.legacyJoined = true; r.recruitJoined = true; r.recruitName = name.trim() + ' (solo)'; r.recruitPlayerId = pid; r.status = 'playing'
     r.gameStartedAt = new Date().toISOString() // gameplay starts now, not at room creation
     roomStore.save(r); setPlayerId(pid); saveSession({ code: r.code, role: 'legacy', name: name.trim(), playerId: pid, solo: true })
     setRole('legacy'); setRoom(r); setView('game')
+  }
+
+  /** Start a local (no-room) Match Point run: challenge links, the
+   *  Saturday Challenge / preview, and the pack sample. */
+  function startLocalMatch(lm: LocalMatch) {
+    if (lm.kind === 'saturday') incStat('satStarts')
+    else incStat('mpStarts')
+    setLocalMatch(lm)
+    setView('localmatch')
+  }
+
+  function startSaturday(preview: boolean) {
+    const weekId = saturdayWeekId()
+    const sc = saturdayScenario()
+    startLocalMatch({
+      scenarioId: sc.id,
+      challengeId: challengeId({ kind: 'sat', weekId }),
+      kind: 'saturday',
+      weekId,
+      preview,
+    })
+  }
+
+  function startQuickPlay(category: QPCategory) {
+    setQp({ category, dateStr: utcDateStr() })
+    setView('quickplay')
+  }
+
+  function exitToLanding() {
+    setLocalMatch(null)
+    setQp(null)
+    setView('landing')
   }
 
   function handleInviteFresh() {
@@ -116,7 +214,8 @@ export default function App() {
     const myName = name.trim() || (role === 'legacy' ? room.legacyName : room.recruitName)
     if (!myName) return
     const pid = newPlayerId()
-    const { room: r } = roomStore.create(myName, role, pid)
+    const { room: r } = roomStore.create(myName, role, pid, room.mode, room.match?.scenarioId ?? '', room.match?.challengeId ?? '')
+    if (room.mode === 'matchpoint') incStat('mpStarts')
     setPlayerId(pid); saveSession({ code: r.code, role, name: myName, playerId: pid, solo: false })
     setRoom(r); setView('lobby')
     // Label 'link' (not 'invite'): the lobby's "Copy invite link" button
@@ -127,7 +226,7 @@ export default function App() {
 
   function leaveRoom() {
     clearSession()
-    setRoom(null); setSolo(false); setView('landing'); setError(''); setJoinCode('')
+    setRoom(null); setSolo(false); setLocalMatch(null); setQp(null); setView('landing'); setError(''); setJoinCode('')
   }
 
   return (
@@ -150,17 +249,32 @@ export default function App() {
 
       {view === 'landing' && (
         <Landing name={name} setName={setName} joinCode={joinCode} setJoinCode={setJoinCode}
-          error={error} loading={loading} onCreate={handleCreate} onJoin={handleJoin} onSolo={startSolo}
-          copy={copy} copied={copied} showEpisodes={showEpisodes} setShowEpisodes={setShowEpisodes} history={history} />
+          error={error} loading={loading} onCreate={handleCreate} onJoin={handleJoin} onSolo={() => startSolo()}
+          copy={copy} copied={copied} showEpisodes={showEpisodes} setShowEpisodes={setShowEpisodes} history={history}
+          today={today} todayId={todayId} onCreateMp={(r) => handleCreate(r, 'matchpoint', today.id)}
+          onSoloMp={() => startSolo('matchpoint', today.id)} onQuickPlay={startQuickPlay}
+          onSaturday={startSaturday} onPlaySample={() => startLocalMatch({ scenarioId: 'pack-sample', challengeId: 'mp-scen-pack-sample', kind: 'pack' })} />
       )}
       {view === 'lobby' && room && (
         <Lobby room={room} role={role} inviteLink={inviteLink} copy={copy} copied={copied} onLeave={leaveRoom} />
       )}
-      {view === 'game' && room && (
+      {view === 'game' && room && room.mode === 'matchpoint' && (
+        <MatchRoomGame room={room} role={role} solo={solo} setRole={setRole} setRoom={setRoom} onExit={leaveRoom} onInviteFresh={handleInviteFresh} />
+      )}
+      {view === 'game' && room && room.mode !== 'matchpoint' && (
         <Game room={room} role={role} solo={solo} setRole={setRole} setRoom={setRoom} onComplete={() => setView('complete')} />
       )}
-      {view === 'complete' && room && (
+      {view === 'complete' && room && room.mode === 'matchpoint' && (
+        <MatchRoomGame room={room} role={role} solo={solo} setRole={setRole} setRoom={setRoom} onExit={leaveRoom} onInviteFresh={handleInviteFresh} />
+      )}
+      {view === 'complete' && room && room.mode !== 'matchpoint' && (
         <Completion room={room} role={role} copy={copy} copied={copied} onAgain={leaveRoom} history={history} onInviteFresh={handleInviteFresh} solo={solo} />
+      )}
+      {view === 'quickplay' && qp && (
+        <QuickPlayGame category={qp.category} dateStr={qp.dateStr} onExit={exitToLanding} />
+      )}
+      {view === 'localmatch' && localMatch && (
+        <LocalMatchView lm={localMatch} onExit={exitToLanding} />
       )}
 
       <footer className="border-t border-faze-line py-6 text-center text-xs text-zinc-500">
@@ -171,12 +285,136 @@ export default function App() {
   )
 }
 
+/* ---------------- Match Point (room co-op) ---------------- */
+// Wraps the shared MatchPointGame with room-backed state: the same room
+// codes, seats, session recovery and BroadcastChannel transport as the
+// vault. The 90-second clock runs from room.gameStartedAt.
+function MatchRoomGame(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: Role) => void; setRoom: (r: RoomState) => void; onExit: () => void; onInviteFresh: () => void }) {
+  const { room } = props
+  const match = room.match!
+  const scenario = getScenario(match.scenarioId)!
+  const startedAtMs = room.gameStartedAt ? new Date(room.gameStartedAt).getTime() : null
+  const completedAtMs = room.completedAt ? new Date(room.completedAt).getTime() : null
+
+  function finalize(next: MatchState) {
+    if (room.status === 'completed') return
+    incStat('mpCompletions')
+    const updated: RoomState = { ...room, match: next, status: 'completed', completedAt: new Date().toISOString() }
+    roomStore.save(updated)
+    props.setRoom(updated)
+  }
+  function handleLock(playId: PlayId) {
+    try {
+      const next = lockPlay(match, playId)
+      const updated = { ...room, match: next }
+      roomStore.save(updated)
+      props.setRoom(updated)
+    } catch { /* unaffordable — the button is disabled anyway */ }
+  }
+  function handleContinue() {
+    try {
+      const next = continueMatch(match)
+      if (next.phase === 'done') finalize(next)
+      else {
+        const updated = { ...room, match: next }
+        roomStore.save(updated)
+        props.setRoom(updated)
+      }
+    } catch { /* already done */ }
+  }
+  function handleTimeout() {
+    finalize(timeoutMatch(match))
+  }
+
+  return (
+    <MatchPointGame
+      scenario={scenario} state={match} role={props.role} solo={props.solo}
+      startedAtMs={startedAtMs} completedAtMs={completedAtMs}
+      contextLabel={`Daily Match Point · ${match.challengeId}`} challengeId={match.challengeId}
+      onLock={handleLock} onContinue={handleContinue} onTimeout={handleTimeout}
+      onSwitchRole={() => props.setRole(props.role === 'legacy' ? 'recruit' : 'legacy')}
+      onReplay={props.onInviteFresh} onExit={props.onExit}
+    />
+  )
+}
+
+/* ---------------- Match Point (local run) ---------------- */
+// Challenge links, Saturday Challenge / preview, and the pack sample.
+// Solo with a role switcher; a friend opening the link starts their own
+// independent run on the same challenge.
+function LocalMatchView(props: { lm: LocalMatch; onExit: () => void }) {
+  const { lm } = props
+  const scenario = getScenario(lm.scenarioId)!
+  const [state, setState] = useState<MatchState>(() => newMatchState(lm.scenarioId, lm.challengeId))
+  const [startedAtMs, setStartedAtMs] = useState(() => Date.now())
+  const [completedAtMs, setCompletedAtMs] = useState<number | null>(null)
+  const [role, setRole] = useState<Role>('legacy')
+
+  const contextLabel =
+    lm.kind === 'saturday' ? `Saturday Challenge · week of ${lm.weekId ?? ''}`
+    : lm.kind === 'pack' ? 'Creator Challenge Pack — sample'
+    : lm.kind === 'daily' ? `Daily Match Point · ${lm.challengeId}`
+    : 'Match Point challenge'
+
+  function finish(next: MatchState) {
+    const now = Date.now()
+    setState(next)
+    setCompletedAtMs(now)
+    const secondsLeft = Math.max(0, MATCH_SECONDS - Math.floor((now - startedAtMs) / 1000))
+    if (lm.kind === 'saturday') {
+      incStat('satCompletions')
+      if (!lm.preview && lm.weekId) {
+        saveSaturdayBest(lm.weekId, {
+          score: matchScore(next, secondsLeft),
+          roundsWon: next.roundsWon,
+          creditsLeft: next.credits,
+          at: new Date(now).toISOString(),
+        })
+      }
+    } else {
+      incStat('mpCompletions')
+    }
+  }
+  function handleLock(playId: PlayId) {
+    try { setState(lockPlay(state, playId)) } catch { /* unaffordable */ }
+  }
+  function handleContinue() {
+    if (state.phase !== 'result') return
+    const next = continueMatch(state)
+    if (next.phase === 'done') finish(next)
+    else setState(next)
+  }
+  function handleTimeout() {
+    if (state.phase === 'done') return
+    finish(timeoutMatch(state))
+  }
+  function handleReplay() {
+    setState(newMatchState(lm.scenarioId, lm.challengeId))
+    setStartedAtMs(Date.now())
+    setCompletedAtMs(null)
+    setRole('legacy')
+  }
+
+  return (
+    <MatchPointGame
+      scenario={scenario} state={state} role={role} solo
+      startedAtMs={startedAtMs} completedAtMs={completedAtMs}
+      contextLabel={contextLabel} challengeId={lm.challengeId} isPreview={lm.preview}
+      onLock={handleLock} onContinue={handleContinue} onTimeout={handleTimeout}
+      onSwitchRole={() => setRole(role === 'legacy' ? 'recruit' : 'legacy')}
+      onReplay={handleReplay} onExit={props.onExit}
+    />
+  )
+}
+
 /* ---------------- Landing ---------------- */
 function Landing(props: {
   name: string; setName: (v: string) => void; joinCode: string; setJoinCode: (v: string) => void
   error: string; loading: boolean; onCreate: (r: Role) => void; onJoin: () => void; onSolo: () => void
   copy: (t: string, l: string) => void; copied: string; showEpisodes: boolean; setShowEpisodes: (v: boolean) => void
   history: { code: string; ms: number; at: string }[]
+  today: Scenario; todayId: string; onCreateMp: (r: Role) => void; onSoloMp: () => void
+  onQuickPlay: (c: QPCategory) => void; onSaturday: (preview: boolean) => void; onPlaySample: () => void
 }) {
   return (
     <main className="mx-auto max-w-6xl px-4">
@@ -194,6 +432,30 @@ function Landing(props: {
           ].map(([t, d]) => (
             <div key={t} className="rounded-2xl border border-faze-line bg-faze-panel p-4 shadow-card">
               <p className="font-mono text-xs font-bold text-faze-red">{t}</p><p className="mt-2 text-sm text-zinc-300">{d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl pb-14">
+        <h2 className="text-center font-display text-2xl md:text-3xl">CHOOSE YOUR GAME</h2>
+        <p className="mt-2 text-center text-sm text-zinc-400">Four ways to play. Daily play is free — every mode, every day.</p>
+        <div className="mt-6 grid gap-3 text-left md:grid-cols-2">
+          {[
+            ['FAZE HISTORY VAULT', 'The original three-stage co-op vault. One holds the history, the other holds the puzzle.', 'Enter the vault', 'room-setup'],
+            ['DAILY MATCH POINT', '90 seconds, three rounds, six shared credits. Same challenge for everyone today.', 'Play today’s match', 'matchpoint'],
+            ['SPORTS QUICK PLAY', 'Five questions, four sports. NBA, NFL, soccer and esports — new set every day.', 'Play a quick round', 'quickplay'],
+            ['SATURDAY CHALLENGE', 'Free weekly event. Opens Saturday at 12 p.m. Central, with a countdown and a preview.', 'See the event', 'saturday'],
+          ].map(([title, desc, btn, anchor]) => (
+            <div key={title} className="rounded-2xl border border-faze-line bg-faze-panel p-5">
+              <p className="font-mono text-xs font-bold text-faze-red">{title}</p>
+              <p className="mt-2 text-sm text-zinc-300">{desc}</p>
+              <button
+                onClick={() => document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="mt-3 rounded-lg border border-faze-red px-3 py-2 text-sm font-bold text-red-200 hover:bg-faze-red/10"
+              >
+                {btn} →
+              </button>
             </div>
           ))}
         </div>
@@ -248,6 +510,73 @@ function Landing(props: {
               <li>Recruit enters the answer — both screens update instantly.</li>
               <li>A historical reveal unlocks, then the next stage opens.</li>
             </ol>
+          </div>
+        </div>
+      </section>
+
+      <section id="matchpoint" className="mx-auto max-w-4xl scroll-mt-24 pb-14">
+        <div className="rounded-2xl border border-faze-line bg-faze-panel p-6 shadow-card">
+          <p className="font-mono text-xs font-bold text-faze-red">DAILY MATCH POINT — FREE</p>
+          <h2 className="mt-1 font-display text-2xl">TODAY: VS {props.today.opponent.toUpperCase()}</h2>
+          <p className="mt-2 text-sm text-zinc-300">{props.today.style} Three rounds, six shared credits, 90 seconds on the clock. Everyone plays the same challenge today ({props.todayId}).</p>
+          <p className="mt-2 text-sm text-zinc-400">Legacy sees what the opponent is doing and what is coming next round. Recruit sees the plays and their costs — and locks the choice. Save is free, so a team can always finish.</p>
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            <button disabled={props.loading} onClick={() => props.onCreateMp('legacy')} className="rounded-xl bg-faze-red px-4 py-3 font-bold disabled:opacity-50 hover:bg-faze-bright">
+              {props.loading ? 'Creating room…' : 'Create room — as Legacy Agent'}</button>
+            <button disabled={props.loading} onClick={() => props.onCreateMp('recruit')} className="rounded-xl border border-faze-red px-4 py-3 font-bold text-red-200 disabled:opacity-50 hover:bg-faze-red/10">
+              Create room — as New Recruit</button>
+            <button onClick={props.onSoloMp} className="rounded-xl border border-faze-line px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500">
+              Practice solo</button>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">To join a friend’s Match Point room, use the Join a Room box above — the room picks the game. Or share a challenge link from any results screen: your friend starts their own run on the same challenge.</p>
+        </div>
+      </section>
+
+      <section id="quickplay" className="mx-auto max-w-4xl scroll-mt-24 pb-14">
+        <div className="rounded-2xl border border-faze-line bg-faze-panel p-6 shadow-card">
+          <p className="font-mono text-xs font-bold text-faze-red">SPORTS QUICK PLAY — FREE</p>
+          <h2 className="mt-1 font-display text-2xl">FIVE QUESTIONS. PICK A SPORT.</h2>
+          <p className="mt-2 text-sm text-zinc-300">Short rounds across NBA, NFL, soccer and esports. Everyone gets the same five questions today, with an explanation and a source after every answer.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {QP_CATEGORIES.map((c) => (
+              <button key={c.id} onClick={() => props.onQuickPlay(c.id)} className="rounded-xl border border-faze-line px-4 py-2.5 font-bold hover:border-faze-red">
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">New question set every day. Questions live in one file (src/lib/quickplay.ts) so we can add more regularly.</p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl pb-14">
+        <SaturdayCard onPlay={props.onSaturday} />
+      </section>
+
+      <section className="mx-auto max-w-4xl pb-14">
+        <PackCard onPlaySample={props.onPlaySample} />
+      </section>
+
+      <section className="mx-auto max-w-4xl pb-14">
+        <div className="rounded-2xl border border-faze-line bg-faze-panel p-6">
+          <p className="font-mono text-xs font-bold text-faze-red">PLAY WITH FRIENDS</p>
+          <h2 className="mt-1 font-display text-2xl">CHALLENGE A FRIEND, OR JOIN THE COMMUNITY</h2>
+          <p className="mt-2 text-sm text-zinc-300">Every results screen has a “Challenge a Friend” button — it copies a short score message and a link to the exact challenge. Your friend opens it and starts their own run. No answers or player details travel in the link.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => props.copy(challengeUrl(props.todayId), 'challenge')}
+              className="rounded-xl bg-faze-red px-4 py-2.5 font-bold"
+            >
+              {props.copied === 'challenge' ? 'Copied!' : 'Copy today’s Match Point challenge link'}
+            </button>
+            {DISCORD_INVITE_URL ? (
+              <a href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer" className="rounded-xl border border-faze-line px-4 py-2.5 font-bold hover:border-faze-red">
+                Join our Discord
+              </a>
+            ) : (
+              <span className="self-center text-xs text-zinc-500">
+                No Discord server linked yet — paste the link into Discord, a group chat, or a message.
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -320,10 +649,15 @@ function Landing(props: {
 function Lobby(props: { room: RoomState; role: Role; inviteLink: string; copy: (t: string, l: string) => void; copied: string; onLeave: () => void }) {
   const { room } = props
   const both = room.legacyJoined && room.recruitJoined
+  const scenario = room.mode === 'matchpoint' && room.match ? getScenario(room.match.scenarioId) : undefined
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 text-center">
       <h1 className="font-display text-4xl">WAITING LOBBY</h1>
-      <p className="mt-2 text-zinc-400">Share the code. When both agents are in, the vault opens automatically.</p>
+      <p className="mt-2 text-zinc-400">
+        {room.mode === 'matchpoint'
+          ? `Daily Match Point — vs ${scenario?.opponent ?? 'today’s opponent'}. Share the code. When both agents are in, the 90-second clock starts.`
+          : 'Share the code. When both agents are in, the vault opens automatically.'}
+      </p>
       <div className="mx-auto mt-6 max-w-md rounded-2xl border border-faze-red/50 bg-faze-panel p-6 shadow-glow">
         <p className="text-xs font-bold tracking-widest text-zinc-400">ROOM CODE</p>
         <p className="mt-1 font-mono text-4xl font-bold tracking-[0.25em] md:text-5xl">{room.code}</p>

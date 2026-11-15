@@ -1,12 +1,22 @@
 import { generateRoomCode, type Role } from './puzzles'
 import { supabase, supabaseConfigured } from './supabase'
+import { newMatchState, dailyChallengeId, type MatchState } from './matchpoint'
 
+export type RoomMode = 'vault' | 'matchpoint'
 export type RoomStatus = 'waiting' | 'playing' | 'completed'
 
 export interface RoomState {
   code: string
   status: RoomStatus
-  stage: number // 1..3, 4 = vault unlocked
+  /** 'vault' = the three-stage FaZe History Vault. 'matchpoint' = the
+   *  90-second Daily Match Point strategy game. Same room codes, seats,
+   *  session recovery and BroadcastChannel transport for both. */
+  mode: RoomMode
+  /** Match Point state; present only when mode === 'matchpoint'. The
+   *  90-second clock runs from gameStartedAt (second seat filled /
+   *  solo start), the same field the vault timer uses. */
+  match?: MatchState
+  stage: number // 1..3, 4 = vault unlocked (vault mode only)
   legacyJoined: boolean
   recruitJoined: boolean
   legacyName: string
@@ -36,9 +46,11 @@ export function newPlayerId(): string {
   try { return crypto.randomUUID() } catch { return `p-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` }
 }
 
-export function emptyRoom(code: string, creatorName: string, creatorRole: Role, creatorPlayerId = ''): RoomState {
+export function emptyRoom(code: string, creatorName: string, creatorRole: Role, creatorPlayerId = '', mode: RoomMode = 'vault', scenarioId = '', challengeId = ''): RoomState {
   return {
-    code, status: 'waiting', stage: 1,
+    code, status: 'waiting', mode,
+    match: mode === 'matchpoint' ? newMatchState(scenarioId, challengeId || dailyChallengeId()) : undefined,
+    stage: 1,
     legacyJoined: creatorRole === 'legacy', recruitJoined: creatorRole === 'recruit',
     legacyName: creatorRole === 'legacy' ? creatorName : '',
     recruitName: creatorRole === 'recruit' ? creatorName : '',
@@ -114,9 +126,9 @@ export class RoomStore {
   private channel: BroadcastChannel | null = null
   private channelCode: string | null = null
 
-  create(name: string, role: Role, playerId = newPlayerId()): { room: RoomState; playerId: string } {
+  create(name: string, role: Role, playerId = newPlayerId(), mode: RoomMode = 'vault', scenarioId = '', challengeId = ''): { room: RoomState; playerId: string } {
     const code = generateRoomCode()
-    const room = emptyRoom(code, name, role, playerId)
+    const room = emptyRoom(code, name, role, playerId, mode, scenarioId, challengeId)
     this.save(room)
     return { room, playerId }
   }

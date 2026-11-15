@@ -161,3 +161,15 @@ Sukhman approved "fix the timer, invite, and victory screen, then test everythin
 - **Victory screen (§4c):** "Verified by room state" → "Mission completed together"; added a concise historical finale (five stars); the vault animation now also swings the padlock shackle open and shows an UNLOCKED badge; share text and achievement card are honest in solo practice too ("in solo practice" instead of "with my partner / 0 solo solves").
 - **Docs:** `DEVPOST.md` (25 tests, honest hash framing, timer/invite fixes noted), `README.md` (25 tests, timer + fresh-room invite documented), `JUDGING_DEMO.md` (judging-criteria table + 3–4 min presentation script) updated.
 - **Still open (unchanged):** the five organizer questions in §5, and the Devpost video link + submission itself.
+
+---
+
+## 8. Update — feature upgrade: Daily Match Point, Sports Quick Play, Saturday Challenge, friend challenges, Creator Pack (2026-11-14 ~20:30 CST)
+
+Sukhman asked for the upgrade in the evening of Nov 14 (still inside the noon Nov 14 – noon Nov 15 hacking window). All new code was written in-window by Mica under Sukhman's direction; no pre-window work, no external game templates. New files: `src/lib/matchpoint.ts`, `src/lib/quickplay.ts`, `src/lib/challenges.ts`, `src/lib/saturday.ts`, `src/lib/config.ts`, `src/lib/stats.ts`, `src/lib/clipboard.ts`, `src/components/MatchPointGame.tsx`, `src/components/QuickPlayGame.tsx`, `src/components/SaturdayCard.tsx`, `src/components/PackCard.tsx`, `src/components/SponsorSlot.tsx`. Existing vault code and room transport were reused, not rebuilt.
+
+Compliance notes for the new features:
+- **No invented facts:** Quick Play questions are original phrasing checked against the public rulebooks/leagues named in each question's source (NBA/NFL rulebooks, FIFA Laws of the Game, Riot Games, Valve, the sponsor-provided FaZe timeline). Opponent teams in Match Point are fictional (Ironwall Five, Blitzline, Ghost Shift) — no real teams are named.
+- **No invented engagement or revenue:** all counts shown are tracked only in this browser (localStorage) and labelled "on this device". The Creator Pack price ($4.99, proposed) and the Saturday cash-prize preview are labelled as proposed/example; no payment is taken, no entry fees collected, no payout promised. A real prize event would need confirmed funding, published contest rules, and server-verified results (documented in README / DEVPOST / JUDGING_DEMO).
+- **Challenge links carry only a challenge ID** — no answers, no player names, no scores. Cross-device co-op is still NOT claimed: challenge links start independent runs, not live shared games.
+- **Still open (unchanged):** the five organizer questions in §5, and the Devpost video link + submission itself (deadline Sun Nov 15, 12:00 PM CST).
