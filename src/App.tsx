@@ -448,7 +448,11 @@ function MatchRoomGame(props: { room: RoomState; role: Role; solo: boolean; setR
   }
 
   function handleContinue() {
-    if (props.role === 'recruit' && match.phase === 'result') updateMatch(continueMatch)
+    // The Continue button is shown to the Recruit, and to a solo player
+    // viewing either side — so the handler must accept solo too. (Before
+    // this fix, a solo player viewing the Legacy side during the result
+    // phase got a button that did nothing.)
+    if ((props.role === 'recruit' || props.solo) && match.phase === 'result') updateMatch(continueMatch)
   }
 
   function handleTimeout() {
@@ -600,7 +604,7 @@ function Landing(props: {
               <button disabled={props.loading} onClick={() => props.onCreateMp('recruit')} className="rounded-lg border border-faze-line px-3 py-2 text-sm font-bold hover:border-faze-red disabled:opacity-50">Host as New Recruit</button>
               <a href="#room-setup" className="rounded-lg border border-faze-line px-3 py-2 text-sm font-bold hover:border-faze-red">Join with a room code</a>
             </div>
-            <p className="mt-3 text-xs text-zinc-400">Co-op uses two tabs in the same browser. Share a challenge link for friends to play their own run.</p>
+            <p className="mt-3 text-xs text-zinc-400">Same-browser co-op: two tabs in the same browser. Share a challenge link for friends to play their own run.</p>
           </div>
         </div>
       </section>
@@ -627,7 +631,7 @@ function Landing(props: {
             <button onClick={props.onSolo} className="rounded-xl border border-faze-line px-4 py-2.5 text-sm text-zinc-300 hover:border-zinc-500">
               Play the vault solo</button>
           </div>
-          <p className="mt-3 text-xs text-zinc-500">Open the invite in a second tab in the same browser. Your partner takes the other role.</p>
+          <p className="mt-3 text-xs text-zinc-500">Same-browser co-op: open the invite in a second tab in the same browser. Your partner takes the other role.</p>
         </div>
 
         <div className="rounded-2xl border border-faze-line bg-faze-panel p-6 shadow-card">

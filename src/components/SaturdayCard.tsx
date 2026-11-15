@@ -66,11 +66,11 @@ export function SaturdayCard({ onPlay }: SaturdayCardProps) {
 
       <div className="mt-4 flex flex-wrap gap-3">
         {open ? (
-          <button onClick={() => onPlay} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
+          <button onClick={onPlay} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
             Play the Saturday Challenge
           </button>
         ) : (
-          <button onClick={() => onPlay} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
+          <button onClick={onPlay} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
             Try the preview
           </button>
         )}
