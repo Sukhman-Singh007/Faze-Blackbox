@@ -31,6 +31,9 @@ export const PLAYS: PlayDef[] = [
 export const STARTING_CREDITS = 6
 export const MATCH_SECONDS = 90
 export const ROUNDS = 3
+export const ROUND_POINTS = 100
+export const CREDIT_POINTS = 10
+export const MAX_TIME_POINTS = 30
 
 export interface PlayOutcome {
   won: boolean
@@ -262,7 +265,7 @@ export function scenarioForDailyId(id: string): Scenario | undefined {
   const m = /^mp-(\d{4}-\d{2}-\d{2})$/.exec(id)
   if (!m) return undefined
   const d = new Date(`${m[1]}T00:00:00.000Z`)
-  if (Number.isNaN(d.getTime())) return undefined
+  if (Number.isNaN(d.getTime()) || utcDateStr(d) !== m[1]) return undefined
   return dailyScenario(d)
 }
 
@@ -351,8 +354,12 @@ export function timeoutMatch(state: MatchState): MatchState {
   return { ...state, phase: 'done', round: ROUNDS + 1, results, timedOut: true }
 }
 
-/** Score = rounds won × 100 + credits left × 25 + seconds left (max 90).
- *  Published on the Saturday card and the results screen. */
-export function matchScore(state: MatchState, secondsLeft: number): number {
-  return state.roundsWon * 100 + state.credits * 25 + Math.max(0, Math.min(MATCH_SECONDS, Math.floor(secondsLeft)))
+export function matchTimePoints(remainingMs: number): number {
+  return Math.floor(Math.min(MATCH_SECONDS * 1000, Math.max(0, remainingMs)) / 3000)
+}
+
+/** Round wins come first. Credits and time together can earn at most 90 points. */
+export function matchScore(state: MatchState, timePoints: number): number {
+  return state.roundsWon * ROUND_POINTS + state.credits * CREDIT_POINTS
+    + Math.max(0, Math.min(MAX_TIME_POINTS, Math.floor(timePoints)))
 }

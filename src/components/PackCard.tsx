@@ -28,10 +28,10 @@ export function PackCard({ onPlaySample }: PackCardProps) {
   return (
     <section id="pack" className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
       <p className="text-xs font-bold tracking-widest text-red-400">CREATOR CHALLENGE PACK — PROPOSED OFFER</p>
-      <h2 className="mt-1 text-2xl font-black">Five extra co-op challenges, yours to keep</h2>
+      <h2 className="mt-1 text-2xl font-black">Creator Challenge Pack</h2>
       <p className="mt-1 text-sm text-zinc-400">
         Proposed price: <b className="text-zinc-100">{CREATOR_PACK_PRICE} one-time</b>. Daily play stays free.
-        One buyer can play every pack challenge with a friend.
+        The planned pack includes five matches one buyer could share with a friend.
       </p>
       <ul className="mt-4 space-y-2 text-left text-sm">
         <li className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
@@ -54,7 +54,7 @@ export function PackCard({ onPlaySample }: PackCardProps) {
         onClick={handleInterested}
         className="mt-4 rounded-xl border border-zinc-700 px-5 py-3 font-bold hover:border-zinc-500"
       >
-        {interested ? 'Thanks — noted! We’ll announce the pack when it’s ready.' : 'I’m interested'}
+        {interested ? 'Interest saved on this device' : 'I’m interested'}
       </button>
     </section>
   )

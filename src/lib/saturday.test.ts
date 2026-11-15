@@ -51,7 +51,7 @@ describe('Saturday Challenge window (Central Time)', () => {
   it('the week id is the Saturday date, even on Sunday', () => {
     expect(saturdayWeekId(SAT_AFTERNOON)).toBe('2026-11-14')
     expect(saturdayWeekId(SUNDAY)).toBe('2026-11-14')
-    expect(saturdayWeekId(FRI_NIGHT)).toBe('2026-11-13')
+    expect(saturdayWeekId(FRI_NIGHT)).toBe('2026-11-14')
   })
 
   it('the Saturday scenario is stable within a week and rotates', () => {
@@ -67,6 +67,17 @@ describe('Saturday Challenge window (Central Time)', () => {
     // Friday 20:00 CT -> Saturday 12:00 CT = 16 hours = 57,600 s
     expect(cd.seconds).toBe(57_600)
     expect(fmtCountdown(57_600)).toBe('16:00:00')
+  })
+
+  it('opens at noon even when the timer was sampled mid-second', () => {
+    const justBefore = new Date('2026-11-14T17:59:59.875Z')
+    expect(nextSaturdayNoonCT(justBefore).toISOString()).toBe('2026-11-14T18:00:00.000Z')
+    expect(saturdayCountdown(justBefore).seconds).toBe(1)
+  })
+
+  it('counts to Monday in Central Time across the fall DST change', () => {
+    const beforeFallBack = new Date('2026-10-31T17:00:00.000Z')
+    expect(saturdayCountdown(beforeFallBack).seconds).toBe(37 * 3600)
   })
 
   it('countdown formats days and hours', () => {

@@ -13,7 +13,7 @@ import {
 } from '../lib/saturday'
 
 export interface SaturdayCardProps {
-  onPlay: (preview: boolean) => void
+  onPlay: () => void
 }
 
 export function SaturdayCard({ onPlay }: SaturdayCardProps) {
@@ -30,7 +30,7 @@ export function SaturdayCard({ onPlay }: SaturdayCardProps) {
   const best = getSaturdayBest(weekId)
 
   return (
-    <section id="saturday" className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+    <section id="saturday" className="scroll-mt-24 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold tracking-widest text-red-400">FREE WEEKLY EVENT</p>
@@ -54,7 +54,7 @@ export function SaturdayCard({ onPlay }: SaturdayCardProps) {
       <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-left text-sm">
         <p className="text-xs font-bold tracking-widest text-zinc-400">SCORING RULES</p>
         <p className="mt-1 leading-relaxed text-zinc-300">
-          Score = rounds won × 100 + credits left × 25 + seconds left on the 90-second clock (max 90).
+          Score = 100 per round won + 10 per credit left + 1 per 3 seconds remaining (up to 30).
           Three rounds, six shared credits, one free Save play so a team can always finish.
         </p>
         <p className="mt-2 text-xs text-zinc-500">
@@ -66,11 +66,11 @@ export function SaturdayCard({ onPlay }: SaturdayCardProps) {
 
       <div className="mt-4 flex flex-wrap gap-3">
         {open ? (
-          <button onClick={() => onPlay(false)} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
+          <button onClick={() => onPlay} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
             Play the Saturday Challenge
           </button>
         ) : (
-          <button onClick={() => onPlay(true)} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
+          <button onClick={() => onPlay} className="rounded-xl bg-red-600 px-5 py-3 font-bold hover:bg-red-500">
             Try the preview
           </button>
         )}
@@ -84,8 +84,7 @@ export function SaturdayCard({ onPlay }: SaturdayCardProps) {
       <div className="mt-4 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 p-4 text-left text-sm">
         <p className="text-xs font-bold tracking-widest text-zinc-400">CASH PRIZE PREVIEW — EXAMPLE ONLY</p>
         <p className="mt-1 leading-relaxed text-zinc-300">
-          Example: a $100 prize pool for the weekly winner. This build collects no entry fees and promises no payout.
-          A real prize event would need confirmed funding, published contest rules, and server-verified results.
+          Future format: a sponsor funds a prize for the top score. The current challenge is free to play and awards a personal best on this device.
         </p>
       </div>
     </section>

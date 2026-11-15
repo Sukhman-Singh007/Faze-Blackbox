@@ -24,6 +24,9 @@ describe('challenge links', () => {
     expect(parseChallenge('')).toBeNull()
     expect(parseChallenge('mp-2026-11-14-extra')).toBeNull()
     expect(parseChallenge('qp-chess-2026-11-14')).toBeNull()
+    expect(parseChallenge('mp-2026-02-30')).toBeNull()
+    expect(parseChallenge('qp-nba-2026-02-30')).toBeNull()
+    expect(parseChallenge('sat-2026-11-13')).toBeNull()
   })
 
   it('the share text carries the link and no answers or player details', () => {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   PLAYS, OUTCOMES, SCENARIOS, DAILY_SCENARIOS, getScenario,
   dailyScenario, dailyChallengeId, scenarioForDailyId,
-  newMatchState, lockPlay, continueMatch, timeoutMatch, matchScore,
+  newMatchState, lockPlay, continueMatch, timeoutMatch, matchScore, matchTimePoints,
   resolvePlay,
 } from './matchpoint'
 
@@ -103,12 +103,22 @@ describe('match flow', () => {
     expect(m.results[1].explanation).toMatch(/Time ran out/)
   })
 
-  it('score = rounds won x100 + credits left x25 + seconds left', () => {
+  it('score = rounds won x100 + credits left x10 + time bonus', () => {
     const m = { ...newMatchState('stackers', 'x'), roundsWon: 2, credits: 3 }
-    expect(matchScore(m, 40)).toBe(200 + 75 + 40)
-    expect(matchScore(m, 0)).toBe(275)
-    expect(matchScore(m, 999)).toBe(200 + 75 + 90) // capped at 90
+    expect(matchScore(m, 30)).toBe(200 + 30 + 30)
+    expect(matchScore(m, 0)).toBe(230)
+    expect(matchScore(m, 999)).toBe(200 + 30 + 30) // capped at 90
   })
+})
+
+it('a win outranks saving all the credits and finishing immediately', () => {
+  const start = newMatchState('stackers', 'mp-2026-11-14')
+  const won = lockPlay(start, 'rush')
+  expect(matchScore(won, 0)).toBeGreaterThan(matchScore(start, 30))
+  expect(matchTimePoints(89_999)).toBe(29)
+  expect(matchTimePoints(3000)).toBe(1)
+  expect(matchTimePoints(2999)).toBe(0)
+  expect(matchTimePoints(-1)).toBe(0)
 })
 
 describe('daily rotation', () => {
@@ -131,6 +141,7 @@ describe('daily rotation', () => {
     expect(id).toBe('mp-2026-11-14')
     expect(scenarioForDailyId(id)?.id).toBe(dailyScenario(new Date('2026-11-14T12:00:00.000Z')).id)
     expect(scenarioForDailyId('mp-2026-13-99')).toBeUndefined()
+    expect(scenarioForDailyId('mp-2026-02-30')).toBeUndefined()
     expect(scenarioForDailyId('not-a-challenge')).toBeUndefined()
   })
 })

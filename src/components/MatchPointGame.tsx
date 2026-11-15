@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  PLAYS, MATCH_SECONDS, ROUNDS, matchScore,
+  PLAYS, MATCH_SECONDS, ROUNDS, ROUND_POINTS, CREDIT_POINTS, matchScore, matchTimePoints,
   type MatchState, type PlayId, type Scenario,
 } from '../lib/matchpoint'
 import type { Role } from '../lib/puzzles'
@@ -39,6 +39,7 @@ export interface MatchPointGameProps {
   onTimeout: () => void
   onSwitchRole?: () => void
   onReplay?: () => void
+  replayLabel?: string
   onExit: () => void
 }
 
@@ -46,13 +47,15 @@ export function MatchPointGame(props: MatchPointGameProps) {
   const { scenario, state, role, solo, startedAtMs, completedAtMs, contextLabel, challengeId } = props
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [copied, setCopied] = useState(false)
+  const [copyFallback, setCopyFallback] = useState('')
   const timeoutFired = useRef(false)
 
-  const remainingMs = startedAtMs == null ? MATCH_SECONDS * 1000 : MATCH_SECONDS * 1000 - (nowMs - startedAtMs)
-  const secondsLeftAtEnd =
-    startedAtMs != null && completedAtMs != null
-      ? Math.max(0, MATCH_SECONDS - Math.floor((completedAtMs - startedAtMs) / 1000))
-      : 0
+  const untilMs = completedAtMs ?? nowMs
+  const elapsedMs = startedAtMs === null ? 0 : Math.max(0, untilMs - startedAtMs)
+  const remainingMs = MATCH_SECONDS * 1000 - elapsedMs
+  const timePoints = startedAtMs != null && completedAtMs != null
+    ? matchTimePoints(MATCH_SECONDS * 1000 - (completedAtMs - startedAtMs))
+    : 0
 
   // Tick the clock while the match is live.
   useEffect(() => {
@@ -72,38 +75,38 @@ export function MatchPointGame(props: MatchPointGameProps) {
 
   useEffect(() => {
     timeoutFired.current = false
-  }, [state.round, state.phase])
+  }, [startedAtMs])
 
   const roundDef = scenario.rounds[Math.min(state.round, ROUNDS) - 1]
   const lastResult = state.results[state.results.length - 1]
-  const score = state.phase === 'done' ? matchScore(state, secondsLeftAtEnd) : 0
+  const score = state.phase === 'done' ? matchScore(state, timePoints) : 0
 
   const handleChallenge = async () => {
     const line =
       state.phase === 'done'
         ? `I won ${state.roundsWon}/${ROUNDS} rounds with ${state.credits} credits left in ${contextLabel} (score ${score})!`
         : `I'm playing ${contextLabel} — ${scenario.opponent}.`
-    const ok = await copyText(challengeShareText(line, challengeId))
+    const share = challengeShareText(line, challengeId)
+    const ok = await copyText(share)
+    setCopyFallback(ok ? '' : share)
     setCopied(ok)
     window.setTimeout(() => setCopied(false), 2500)
   }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 text-center">
-      <p className="text-xs font-bold tracking-widest text-red-400">{contextLabel.toUpperCase()}</p>
-      <h1 className="mt-1 text-3xl font-black">Daily Match Point</h1>
+      <h1 className="mt-1 text-3xl font-black">{contextLabel}</h1>
       <p className="mt-1 text-sm text-zinc-400">
         vs <span className="font-bold text-zinc-200">{scenario.opponent}</span> — {scenario.style}
       </p>
       {props.isPreview && (
         <p className="mx-auto mt-3 max-w-md rounded-lg border border-amber-600/50 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
-          Preview — the Saturday Challenge opens Saturday at 12 p.m. Central. Preview scores do not count toward your
-          personal best.
+          Practice run. Only the current Saturday Challenge counts toward your personal best.
         </p>
       )}
 
       {/* Match status bar */}
-      <div className="mt-4 flex items-center justify-center gap-3 text-sm">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
         <span className="rounded-full border border-zinc-700 px-3 py-1">Round {Math.min(state.round, ROUNDS)} / {ROUNDS}</span>
         <span className="rounded-full border border-zinc-700 px-3 py-1">Credits: <b>{state.credits}</b> / 6</span>
         <span className={`rounded-full border px-3 py-1 font-mono ${remainingMs < 15_000 && state.phase !== 'done' ? 'border-red-500 text-red-300' : 'border-zinc-700'}`}>
@@ -176,12 +179,12 @@ export function MatchPointGame(props: MatchPointGameProps) {
           <p className="mt-2 text-lg">You played <b>{lastResult.playName}</b>.</p>
           <p className="mt-2 leading-relaxed text-zinc-300">{lastResult.explanation}</p>
           <p className="mt-3 text-sm text-zinc-500">Credits left: <b className="text-zinc-200">{state.credits}</b></p>
-          <button
+          {role === 'recruit' || solo ? <button
             onClick={props.onContinue}
             className="mt-5 rounded-xl bg-red-600 px-6 py-3 font-bold hover:bg-red-500"
           >
-            {state.round >= ROUNDS ? 'See results' : `Continue to round ${state.round + 1}`}
-          </button>
+            Continue to round {state.round + 1}
+          </button> : <p className="mt-4 text-sm text-zinc-400">Waiting for your Recruit to continue.</p>}
         </div>
       )}
 
@@ -194,8 +197,8 @@ export function MatchPointGame(props: MatchPointGameProps) {
             </p>
             <p className="mt-1 text-zinc-400">Credits left: <b className="text-zinc-200">{state.credits}</b></p>
             <p className="mt-4 text-sm text-zinc-400">
-              Score <b className="text-zinc-100">{score}</b> = {state.roundsWon} rounds × 100 + {state.credits} credits × 25
-              + {secondsLeftAtEnd} seconds left
+              Score <b className="text-zinc-100">{score}</b> = {state.roundsWon} × {ROUND_POINTS} for wins + {state.credits} × {CREDIT_POINTS} for credits
+              + {timePoints} for time
             </p>
             {state.timedOut && (
               <p className="mt-2 text-sm text-amber-300">Time ran out — unplayed rounds counted as lost.</p>
@@ -219,7 +222,7 @@ export function MatchPointGame(props: MatchPointGameProps) {
             </button>
             {props.onReplay && (
               <button onClick={props.onReplay} className="rounded-xl border border-zinc-700 px-5 py-3 font-bold hover:border-zinc-500">
-                Play again
+                {props.replayLabel ?? 'Play again'}
               </button>
             )}
             <button onClick={props.onExit} className="rounded-xl border border-zinc-700 px-5 py-3 font-bold hover:border-zinc-500">
@@ -229,6 +232,11 @@ export function MatchPointGame(props: MatchPointGameProps) {
           <p className="mt-2 text-xs text-zinc-500">
             The link opens the same challenge for your friend — their own run, no answers in the link.
           </p>
+
+          {copyFallback && <label className="mt-3 block text-sm text-zinc-300">
+            Copy this challenge manually
+            <input className="mt-1 w-full rounded border border-zinc-600 bg-black p-2" value={copyFallback} readOnly onFocus={(e) => e.currentTarget.select()} />
+          </label>}
 
           <SponsorSlot />
         </div>
