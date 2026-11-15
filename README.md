@@ -25,7 +25,7 @@ Each stage has three progressive hints, revealed one at a time. A first-time pla
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # vitest — 21 tests: puzzle validation, design rules, room codes
+npm test           # vitest — 25 tests: puzzle validation, design rules, room codes, gameplay timer
 npm run build      # tsc + vite build
 ```
 
@@ -36,14 +36,14 @@ No keys needed to play: the app runs in **demo-local mode** (two tabs on one dev
 1. Tab A: enter a name → **Create Room — as Legacy Agent** → copy the 6-character code.
 2. Tab B (second tab): enter a name → paste the code → **Join Room**. You automatically become New Recruit.
 3. The game starts automatically. Legacy reads their dossier out loud; Recruit asks the right question and enters the answer.
-4. After Stage 3 the vault animation plays and both players get a shareable achievement.
-5. A completed room code cannot be reused: joining it again shows "That room already finished its mission. Create a new room to play again."
+4. After Stage 3 the vault animation plays and both players get a shareable achievement. The timer on the completion screen measures gameplay only — from the moment the second player joined to the vault opening. Lobby waiting time doesn't count.
+5. A completed room code cannot be reused: joining it again shows "That room already finished its mission. Create a new room to play again." From the completion screen, **Invite a friend to play** creates a fresh room and copies its invite link — it never invites anyone into the finished room.
 
 Solo? Use **Practice solo** on the landing page — it shows both sides so a judge can test alone (with a role switcher).
 
 ## Tech stack
 
-React 19 + Vite + TypeScript + Tailwind CSS · Supabase (PostgreSQL + Edge Functions — code in repo, not live) · Vercel
+React 19 + Vite + TypeScript + Tailwind CSS · Supabase (PostgreSQL + Edge Functions — code in repo, not live) · Vercel. **Implemented vs proposed:** everything above "Business model" is implemented and tested; the business model is a proposal, not a live revenue stream. Cross-device multiplayer and Episode 02 are proposed / not yet built.
 
 ## Backend & security — what is actually running
 

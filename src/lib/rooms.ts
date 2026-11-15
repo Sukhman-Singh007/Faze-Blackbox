@@ -20,6 +20,14 @@ export interface RoomState {
   attempts: Record<number, number>
   solvedAt: Record<number, string>
   startedAt: string
+  /** When gameplay actually began: the moment the second seat filled
+   *  (or solo practice started). NOT room creation — the old timer
+   *  measured creation -> completion, so lobby/idle time inflated it
+   *  (a completed game showed 82:29 for ~5–10 min of play).
+   *  Null while waiting in the lobby; persisted in room state so a
+   *  refresh never resets it. Pre-fix rooms have null and fall back
+   *  to startedAt in gameElapsedMs(). */
+  gameStartedAt: string | null
   completedAt: string | null
   lastEvent: string
 }
@@ -37,8 +45,24 @@ export function emptyRoom(code: string, creatorName: string, creatorRole: Role, 
     legacyPlayerId: creatorRole === 'legacy' ? creatorPlayerId : '',
     recruitPlayerId: creatorRole === 'recruit' ? creatorPlayerId : '',
     attempts: {}, solvedAt: {}, startedAt: new Date().toISOString(),
+    gameStartedAt: null,
     completedAt: null, lastEvent: 'Room created',
   }
+}
+
+/** Gameplay elapsed time in ms. Starts at gameStartedAt (second seat
+ *  filled / solo start), freezes at completedAt. Both players derive
+ *  the same number from the same room state. While waiting in the lobby
+ *  (no gameStartedAt) it is 0, however long the room sits — that is the
+ *  82:29 bug. Pre-fix completed rooms (no gameStartedAt) fall back to
+ *  startedAt so old history still reads. */
+export function gameElapsedMs(room: RoomState, now = Date.now()): number {
+  if (room.completedAt) {
+    const start = room.gameStartedAt ? new Date(room.gameStartedAt).getTime() : new Date(room.startedAt).getTime()
+    return Math.max(0, new Date(room.completedAt).getTime() - start)
+  }
+  if (!room.gameStartedAt) return 0
+  return Math.max(0, now - new Date(room.gameStartedAt).getTime())
 }
 
 const KEY = (code: string) => `faze-blackbox:room:${code}`
@@ -123,7 +147,12 @@ export class RoomStore {
       if (role === 'legacy') { room.legacyJoined = true; room.legacyName = name; room.legacyPlayerId = playerId }
       else { room.recruitJoined = true; room.recruitName = name; room.recruitPlayerId = playerId }
       room.lastEvent = `${name} joined as ${role === 'legacy' ? 'Legacy Agent' : 'New Recruit'}`
-      if (room.legacyJoined && room.recruitJoined && room.status === 'waiting') room.status = 'playing'
+      if (room.legacyJoined && room.recruitJoined && room.status === 'waiting') {
+        room.status = 'playing'
+        // Gameplay starts NOW — not at room creation. Set once; a
+        // reconnect/refresh must never move it.
+        if (!room.gameStartedAt) room.gameStartedAt = new Date().toISOString()
+      }
       this.save(room)
       return { room, role, playerId }
     }

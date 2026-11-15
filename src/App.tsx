@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { STAGES, validateAnswer, type Role } from './lib/puzzles'
-import { roomStore, recordCompletion, getHistory, newPlayerId, saveSession, loadSession, clearSession, ownsSeat, type RoomState } from './lib/rooms'
+import { roomStore, recordCompletion, getHistory, newPlayerId, saveSession, loadSession, clearSession, ownsSeat, gameElapsedMs, type RoomState } from './lib/rooms'
 import { validateAnswerServer } from './lib/supabase'
 
 type View = 'landing' | 'lobby' | 'game' | 'complete'
@@ -102,8 +102,24 @@ export default function App() {
     setError(''); setSolo(true)
     const { room: r, playerId: pid } = roomStore.create(name.trim(), 'legacy', playerId)
     r.legacyJoined = true; r.recruitJoined = true; r.recruitName = name.trim() + ' (solo)'; r.recruitPlayerId = pid; r.status = 'playing'
+    r.gameStartedAt = new Date().toISOString() // gameplay starts now, not at room creation
     roomStore.save(r); setPlayerId(pid); saveSession({ code: r.code, role: 'legacy', name: name.trim(), playerId: pid, solo: true })
     setRole('legacy'); setRoom(r); setView('game')
+  }
+
+  function handleInviteFresh() {
+    // The completion screen's invite must lead to a FRESH playable room:
+    // the completed room's code is unjoinable by design. Create a new
+    // room for this player (same name, same role), copy its invite link,
+    // and take the player to its lobby to wait for their friend.
+    if (!room) return
+    const myName = name.trim() || (role === 'legacy' ? room.legacyName : room.recruitName)
+    if (!myName) return
+    const pid = newPlayerId()
+    const { room: r } = roomStore.create(myName, role, pid)
+    setPlayerId(pid); saveSession({ code: r.code, role, name: myName, playerId: pid, solo: false })
+    setRoom(r); setView('lobby')
+    copy(`${window.location.origin}${window.location.pathname}?room=${r.code}`, 'invite')
   }
 
   function leaveRoom() {
@@ -141,7 +157,7 @@ export default function App() {
         <Game room={room} role={role} solo={solo} setRole={setRole} setRoom={setRoom} onComplete={() => setView('complete')} />
       )}
       {view === 'complete' && room && (
-        <Completion room={room} role={role} copy={copy} copied={copied} onAgain={leaveRoom} history={history} inviteLink={inviteLink} />
+        <Completion room={room} role={role} copy={copy} copied={copied} onAgain={leaveRoom} history={history} onInviteFresh={handleInviteFresh} solo={solo} />
       )}
 
       <footer className="border-t border-faze-line py-6 text-center text-xs text-zinc-500">
@@ -342,12 +358,13 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
   const [busy, setBusy] = useState(false)
   const [reveal, setReveal] = useState<null | { heading: string; body: string; source: string }>(null)
   const [hintLevel, setHintLevel] = useState(0)
-  // Timer is anchored to the room's startedAt (persisted in room state),
-  // not to this mount — so a refresh mid-game does not reset the clock.
-  const startRef = useRef(new Date(room.startedAt).getTime())
-  const [elapsed, setElapsed] = useState(() => Date.now() - startRef.current)
+  // Timer is anchored to the room's gameStartedAt (persisted in room
+  // state) — the moment play began, not room creation — so a refresh
+  // mid-game does not reset the clock, and it freezes at completedAt
+  // because gameElapsedMs() ends at completedAt once it is set.
+  const [elapsed, setElapsed] = useState(() => gameElapsedMs(room))
 
-  useEffect(() => { const t = setInterval(() => setElapsed(Date.now() - startRef.current), 1000); return () => clearInterval(t) }, [])
+  useEffect(() => { const t = setInterval(() => setElapsed(gameElapsedMs(room)), 1000); return () => clearInterval(t) }, [room])
   useEffect(() => { setGuess(''); setMsg(''); setHintLevel(0) }, [room.stage])
 
   const attempts = room.attempts[stage.id] || 0
@@ -367,7 +384,7 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
     updated.lastEvent = `Stage ${stage.id} solved`
     if (stage.id === 3) {
       updated.stage = 4; updated.status = 'completed'; updated.completedAt = new Date().toISOString()
-      recordCompletion(room.code, Date.now() - new Date(room.startedAt).getTime())
+      recordCompletion(room.code, gameElapsedMs(updated))
     } else { updated.stage = stage.id + 1 }
     roomStore.save(updated); props.setRoom(updated)
     setReveal(stage.reveal)
@@ -461,19 +478,22 @@ function Game(props: { room: RoomState; role: Role; solo: boolean; setRole: (r: 
 }
 
 /* ---------------- Completion ---------------- */
-function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: string) => void; copied: string; onAgain: () => void; history: { code: string; ms: number; at: string }[]; inviteLink: string }) {
+function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: string) => void; copied: string; onAgain: () => void; history: { code: string; ms: number; at: string }[]; onInviteFresh: () => void; solo: boolean }) {
   const { room } = props
-  const totalMs = room.completedAt ? new Date(room.completedAt).getTime() - new Date(room.startedAt).getTime() : 0
+  const totalMs = gameElapsedMs(room)
   const totalAttempts = Object.values(room.attempts).reduce((a, b) => a + b, 0)
-  const shareText = `I unlocked the FaZe Blackbox with my partner in ${fmt(totalMs)}! Room ${room.code} — 3 stages, 0 solo solves. Unlock the Past. Build the Next Generation. #FaZeBlackbox #HackUTA2026`
+  const shareText = props.solo
+    ? `I unlocked the FaZe Blackbox in solo practice in ${fmt(totalMs)}! Room ${room.code} — 3 stages. Unlock the Past. Build the Next Generation. #FaZeBlackbox #HackUTA2026`
+    : `I unlocked the FaZe Blackbox with my partner in ${fmt(totalMs)}! Room ${room.code} — 3 stages, 0 solo solves. Unlock the Past. Build the Next Generation. #FaZeBlackbox #HackUTA2026`
   const [unlocked, setUnlocked] = useState(false)
   useEffect(() => { const t = setTimeout(() => setUnlocked(true), 600); return () => clearTimeout(t) }, [])
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 text-center">
       <div className={`vault-ring mx-auto grid h-40 w-40 place-items-center rounded-full ${unlocked ? 'vault-open' : ''}`}>
-        <div className="grid h-32 w-32 place-items-center rounded-full bg-black"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="28" width="36" height="26" rx="4" fill="none" stroke="#E10600" strokeWidth="4"/><path d="M22 28v-8a10 10 0 0 1 20 0v8" fill="none" stroke="#E10600" strokeWidth="4"/><circle cx="32" cy="40" r="4" fill="#E10600"/></svg></div>
+        <div className="grid h-32 w-32 place-items-center rounded-full bg-black"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="28" width="36" height="26" rx="4" fill="none" stroke="#E10600" strokeWidth="4"/><path className="vault-shackle" d="M22 28v-8a10 10 0 0 1 20 0v8" fill="none" stroke="#E10600" strokeWidth="4"/><circle cx="32" cy="40" r="4" fill="#E10600"/></svg></div>
       </div>
+      {unlocked && <p className="rise mt-4 inline-block rounded-full border border-green-500/60 bg-green-950/40 px-4 py-1 text-xs font-bold tracking-widest text-green-300">✓ UNLOCKED</p>}
       <p className="mt-6 inline-block rounded-full border border-green-500/60 bg-green-950/40 px-4 py-1 text-xs font-bold tracking-widest text-green-300">★ MISSION COMPLETE — 3 / 3 STAGES SOLVED TOGETHER</p>
       <h1 className="mt-4 font-display text-4xl md:text-5xl"><span className="shimmer-text">THE VAULT IS OPEN</span></h1>
       <p className="mt-3 text-zinc-300">Room {room.code} · {room.legacyName} (Legacy) + {room.recruitName} (Recruit) · {fmt(totalMs)} · {totalAttempts} total attempts</p>
@@ -481,14 +501,20 @@ function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: s
       <div className="mx-auto mt-6 max-w-md rounded-2xl border border-yellow-600/60 bg-gradient-to-b from-yellow-950/40 to-faze-panel p-6 text-left">
         <p className="font-mono text-xs font-bold text-yellow-300">SHAREABLE ACHIEVEMENT</p>
         <p className="mt-2 font-display text-xl">BLACKBOX UNLOCKED</p>
-        <p className="mt-1 text-sm text-zinc-300">Completed all 3 stages cooperatively — no solo solves.</p>
-        <p className="mt-2 text-xs text-zinc-500">Verified by room state · {new Date().toLocaleDateString()}</p>
+        <p className="mt-1 text-sm text-zinc-300">{props.solo ? 'Completed all 3 stages in solo practice.' : 'Completed all 3 stages cooperatively — no solo solves.'}</p>
+        <p className="mt-2 text-xs text-zinc-500">Mission completed together · {new Date().toLocaleDateString()}</p>
+      </div>
+
+      <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-faze-line bg-faze-panel p-5 text-left">
+        <p className="font-mono text-xs font-bold text-faze-red">THE FINALE — FIVE STARS ON THE CREST</p>
+        <p className="mt-2 text-sm text-zinc-300">One star per world title: the 2021 Call of Duty League Championship, the 2022 PGL Major in Antwerp, the 2023 Halo World Championship, and back-to-back Six Invitationals in 2025 and 2026 — the first organisation ever to defend one. You counted them together: three from the Legacy Agent, two from the Recruit.</p>
+        <p className="mt-2 text-xs text-zinc-500">Source: “FaZe Clan: A Timeline, 2010–2026” (sponsor-provided). The star mapping is the timeline’s own reconstruction, not an official FaZe statement.</p>
       </div>
 
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         <button onClick={() => props.copy(shareText, 'share')} className="rounded-xl bg-faze-red px-5 py-3 font-bold shadow-glow">{props.copied === 'share' ? 'Copied!' : 'Copy achievement to share'}</button>
         <button onClick={async () => { if (navigator.share) { try { await navigator.share({ title: 'FaZe Blackbox', text: shareText }) } catch { /* user cancelled */ } } else props.copy(shareText, 'share') }} className="rounded-xl border border-faze-line px-5 py-3 font-bold">Share…</button>
-        <button onClick={() => props.copy(props.inviteLink, 'invite')} className="rounded-xl border border-faze-red px-5 py-3 font-bold text-red-200">{props.copied === 'invite' ? 'Invite link copied!' : 'Invite a friend to play'}</button>
+        <button onClick={props.onInviteFresh} className="rounded-xl border border-faze-red px-5 py-3 font-bold text-red-200">{props.copied === 'invite' ? 'New room created — invite link copied!' : 'Invite a friend to play'}</button>
         <button onClick={props.onAgain} className="rounded-xl border border-faze-line px-5 py-3 font-bold">Play again — new room</button>
       </div>
 

@@ -46,3 +46,35 @@ A: The answer is split across both players' information, not just their screens.
 - Episode 02 is a preview only — it is not playable.
 - Mobile 390px layout has not been verified in a resizable browser; desktop is the tested path.
 - No real sponsors, no real revenue, no invented statistics anywhere in the product.
+
+## Judging-criteria alignment (FaZe sponsor challenge)
+
+| Criterion | Implemented evidence | What we will demonstrate | Remaining limitations |
+|---|---|---|---|
+| **1. Target audience and problem** | Two roles built for the two real FaZe audiences: Legacy Agent (longtime fan who knows the history) and New Recruit (new fan discovering it). The landing page names both and explains why they need each other. | The role split on screen: Legacy sees a dossier the Recruit cannot see; the Recruit holds the only keypad. | No user research was run during the hackathon — the audience split comes from the sponsor brief and the timeline, not from interviews. |
+| **2. Creativity and product concept** | A cooperative vault where the answer is split across two players' information, not just their screens. Stage 2's answer word appears in neither player's text; Stage 3's answer is a sum neither side can compute alone. | Stage 3 live: Legacy counts 3, Recruit counts 2, together they get FIVE. | One episode only (Episode 01). Episodes 02–03 are previews, not playable. |
+| **3. Prioritization and resource decisions** | With 24 hours and no backend credentials on demo day, we built the local transport first (two tabs, no keys) so the game always works, and kept Supabase as code in the repo for the next step. We spent the time on puzzles and verified history instead of a backend judges can't test. | The game runs with zero setup: open the link, create a room, play. | Cross-device play was deferred, not finished — it is the honest next step, documented in `AUDIT.md`. |
+| **4. Technical feasibility and MVP quality** | Complete playable 3-stage game: room codes, lobby, session recovery after refresh, progressive hints, vault unlock, shareable achievement, completed-mission history. 25 unit tests pass (puzzle rules, room codes, gameplay timer); TypeScript + production build clean. | Full playthrough in the demo, including a refresh mid-game that restores the same stage. | Demo-local only; answer validation is a demo-grade client-side hash check (brute-forceable, fail-open) until server validation ships. |
+| **5. Fan engagement and audience growth** | Weekly episode format with a reason to return; every game pairs a longtime fan with a new fan and the longtime fan teaches the new fan FaZe history to win; shareable achievements and invite links (the completion-screen invite creates a fresh room). | The completion screen: shareable achievement, fresh-room invite, Episode 02 preview. | No real players, no engagement data, no measured retention — everything about growth is a proposal, not a result. |
+
+### Product recommendation and proposed revenue model
+
+**Recommendation:** ship weekly sponsored mystery episodes. A brand sponsors one episode; its branding appears inside the mission (a clue, a prop, a location), never as a banner. After completing an episode, players may unlock optional sponsor rewards. FaZe could measure episode starts, completion rates, return visits, shares, and optional offer clicks.
+
+**Honest status:** proposed only. No sponsors, no revenue, no user counts, no engagement data. All sponsor examples in the demo are labelled hypothetical.
+
+## Presentation script (3–4 minutes, natural language)
+
+Say it in your own words — this is a guide, not a script to memorize. Two speakers work well: one presents, the other plays the second tab.
+
+**[0:00–0:30] The problem.** "FaZe has two kinds of fans. There are longtime fans who lived the history — and there's a whole new generation just finding FaZe now. But nothing puts those two groups on the same team. So we built a game where they have to play together — or the vault never opens."
+
+**[0:30–1:00] The idea.** "FaZe Blackbox is a two-player mystery vault. One player is the Legacy Agent — the longtime fan — who sees historical clues. The other is the New Recruit — the new fan — who holds the puzzle and the only keypad. Neither one can solve a stage alone. They have to talk. Three stages, three real moments from FaZe history, one vault."
+
+**[1:00–2:30] Live demo (two tabs).** "Let me show you. Tab one creates a room as the Legacy Agent. Tab two joins with the code and becomes the Recruit automatically. Watch — the Legacy side shows a dossier, and on the Recruit's screen that same clue is blacked out. And the keypad only exists on the Recruit's side. Stage one: the founding file says FaZe started in May 2010 as FaZe Sniping — so the answer is SNIP. Stage two: the 2014 entry is about the crew moving in together in Plainview — the answer is HOUSE, and that word appears nowhere on either screen, you have to reason it out. Stage three is the one we're proudest of: the Legacy counts three world-title wins, the Recruit counts two, and the answer is the sum — FIVE. The vault opens, and both players get a shareable achievement."
+
+**[2:30–3:00] How it's built.** "React, TypeScript and Tailwind, deployed on Vercel. The demo runs locally in the browser — two tabs on one device sync with no setup, and if a player refreshes, their seat and stage come back. The Supabase backend code is in the repo — the migration and the answer-validation function — but it's not wired up on the live deployment yet, and we're not going to pretend it is. The answers are checked against hashes in the demo, which is fine for a demo but not real security — server-side validation is the next step."
+
+**[3:00–3:30] Why fans come back, and the money.** "A new episode drops every week, so there's a reason to return. Every game is also an onboarding: the longtime fan teaches the new fan FaZe history in order to win. And the business side is sponsored episodes — a brand sponsors a week, its branding is woven into the mission itself, and players can unlock sponsor rewards after they win. That's a proposal, not a deal — there are no sponsors yet, and everything sponsor-related in the demo is labelled hypothetical."
+
+**[3:30–4:00] What's next and what's honest.** "Next: wire up Supabase for real cross-device play with server-side validation, then ship Episode 02 with a real sponsor. What we know is unfinished: cross-device multiplayer, Episode 02, and mobile layout testing. What we know works: the game you're looking at, the history in it — every fact comes from the sponsor-provided timeline — and the fact that two players have to think together to open the vault. Thank you — happy to let you play it."

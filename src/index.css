@@ -12,6 +12,9 @@ body { background: #0A0A0B; color: #F5F5F5; font-family: Inter, system-ui, sans-
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 .rise { animation: riseIn .5s ease both; }
 .vault-open { animation: vaultOpen 1.6s ease-in-out both; }
+/* The padlock shackle swings open once the ring has turned. */
+.vault-shackle { transition: transform .8s ease-in-out .9s; transform-box: fill-box; transform-origin: bottom center; }
+.vault-open .vault-shackle { transform: translateY(-7px) rotate(-16deg); }
 .shimmer-text { background: linear-gradient(90deg, #fff, #E10600, #fff); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2.5s linear infinite; }
 input, button { outline: none; }
 input:focus { border-color: #E10600 !important; box-shadow: 0 0 0 3px rgba(225,6,0,.25); }
@@ -22,4 +25,5 @@ button:focus-visible, a:focus-visible { outline: 2px solid #E10600; outline-offs
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .vault-open, .rise, .shimmer-text { animation: none !important; }
+  .vault-open .vault-shackle { transform: none !important; }
 }
