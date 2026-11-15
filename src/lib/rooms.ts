@@ -112,6 +112,7 @@ export function ownsSeat(room: RoomState, role: Role, s: PlayerSession): boolean
  *  the seam where the Supabase Realtime adapter plugs in. */
 export class RoomStore {
   private channel: BroadcastChannel | null = null
+  private channelCode: string | null = null
 
   create(name: string, role: Role, playerId = newPlayerId()): { room: RoomState; playerId: string } {
     const code = generateRoomCode()
@@ -129,7 +130,12 @@ export class RoomStore {
 
   save(room: RoomState) {
     localStorage.setItem(KEY(room.code), JSON.stringify(room))
-    this.channel?.postMessage(room)
+    // Broadcast ONLY to subscribers of this room's own channel. Before
+    // this guard, save() posted on whatever channel was currently open,
+    // so creating a fresh room from the completion screen broadcast the
+    // NEW room on the OLD room's channel — and the other tab adopted it
+    // while still showing its completion screen (live E2E, 2026-11-14).
+    if (this.channel && this.channelCode === room.code) this.channel.postMessage(room)
   }
 
   join(code: string, name: string, playerId = newPlayerId()): { room: RoomState; role: Role; playerId: string } | { error: string } {
@@ -163,14 +169,17 @@ export class RoomStore {
 
   subscribe(code: string, cb: (r: RoomState) => void) {
     this.channel = new BroadcastChannel(CH(code))
-    this.channel.onmessage = (e) => cb(e.data as RoomState)
+    this.channelCode = code
+    // Defense in depth: ignore messages for any other room code, even
+    // if a sender ever posts on the wrong channel again.
+    this.channel.onmessage = (e) => { const r = e.data as RoomState; if (r && r.code === code) cb(r) }
     const onStorage = (e: StorageEvent) => {
       if (e.key === KEY(code) && e.newValue) cb(JSON.parse(e.newValue) as RoomState)
     }
     window.addEventListener('storage', onStorage)
     return () => {
       window.removeEventListener('storage', onStorage)
-      this.channel?.close(); this.channel = null
+      this.channel?.close(); this.channel = null; this.channelCode = null
     }
   }
 

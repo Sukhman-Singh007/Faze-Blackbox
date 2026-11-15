@@ -25,7 +25,7 @@ Each stage has three progressive hints, revealed one at a time. A first-time pla
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # vitest — 25 tests: puzzle validation, design rules, room codes, gameplay timer
+npm test           # vitest — 26 tests: puzzle validation, design rules, room codes, gameplay timer, broadcast isolation
 npm run build      # tsc + vite build
 ```
 

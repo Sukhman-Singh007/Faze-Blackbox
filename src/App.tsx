@@ -119,7 +119,10 @@ export default function App() {
     const { room: r } = roomStore.create(myName, role, pid)
     setPlayerId(pid); saveSession({ code: r.code, role, name: myName, playerId: pid, solo: false })
     setRoom(r); setView('lobby')
-    copy(`${window.location.origin}${window.location.pathname}?room=${r.code}`, 'invite')
+    // Label 'link' (not 'invite'): the lobby's "Copy invite link" button
+    // shows "Copied!" for that label, which is the confirmation the
+    // player actually sees after landing in the new lobby.
+    copy(`${window.location.origin}${window.location.pathname}?room=${r.code}`, 'link')
   }
 
   function leaveRoom() {
@@ -494,7 +497,7 @@ function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: s
         <div className="grid h-32 w-32 place-items-center rounded-full bg-black"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="28" width="36" height="26" rx="4" fill="none" stroke="#E10600" strokeWidth="4"/><path className="vault-shackle" d="M22 28v-8a10 10 0 0 1 20 0v8" fill="none" stroke="#E10600" strokeWidth="4"/><circle cx="32" cy="40" r="4" fill="#E10600"/></svg></div>
       </div>
       {unlocked && <p className="rise mt-4 inline-block rounded-full border border-green-500/60 bg-green-950/40 px-4 py-1 text-xs font-bold tracking-widest text-green-300">✓ UNLOCKED</p>}
-      <p className="mt-6 inline-block rounded-full border border-green-500/60 bg-green-950/40 px-4 py-1 text-xs font-bold tracking-widest text-green-300">★ MISSION COMPLETE — 3 / 3 STAGES SOLVED TOGETHER</p>
+      <p className="mt-6 inline-block rounded-full border border-green-500/60 bg-green-950/40 px-4 py-1 text-xs font-bold tracking-widest text-green-300">{props.solo ? '★ MISSION COMPLETE — 3 / 3 STAGES SOLVED IN SOLO PRACTICE' : '★ MISSION COMPLETE — 3 / 3 STAGES SOLVED TOGETHER'}</p>
       <h1 className="mt-4 font-display text-4xl md:text-5xl"><span className="shimmer-text">THE VAULT IS OPEN</span></h1>
       <p className="mt-3 text-zinc-300">Room {room.code} · {room.legacyName} (Legacy) + {room.recruitName} (Recruit) · {fmt(totalMs)} · {totalAttempts} total attempts</p>
 
@@ -502,19 +505,19 @@ function Completion(props: { room: RoomState; role: Role; copy: (t: string, l: s
         <p className="font-mono text-xs font-bold text-yellow-300">SHAREABLE ACHIEVEMENT</p>
         <p className="mt-2 font-display text-xl">BLACKBOX UNLOCKED</p>
         <p className="mt-1 text-sm text-zinc-300">{props.solo ? 'Completed all 3 stages in solo practice.' : 'Completed all 3 stages cooperatively — no solo solves.'}</p>
-        <p className="mt-2 text-xs text-zinc-500">Mission completed together · {new Date().toLocaleDateString()}</p>
+        <p className="mt-2 text-xs text-zinc-500">{props.solo ? 'Mission completed in solo practice' : 'Mission completed together'} · {new Date().toLocaleDateString()}</p>
       </div>
 
       <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-faze-line bg-faze-panel p-5 text-left">
         <p className="font-mono text-xs font-bold text-faze-red">THE FINALE — FIVE STARS ON THE CREST</p>
-        <p className="mt-2 text-sm text-zinc-300">One star per world title: the 2021 Call of Duty League Championship, the 2022 PGL Major in Antwerp, the 2023 Halo World Championship, and back-to-back Six Invitationals in 2025 and 2026 — the first organisation ever to defend one. You counted them together: three from the Legacy Agent, two from the Recruit.</p>
+        <p className="mt-2 text-sm text-zinc-300">One star per world title: the 2021 Call of Duty League Championship, the 2022 PGL Major in Antwerp, the 2023 Halo World Championship, and back-to-back Six Invitationals in 2025 and 2026 — the first organisation ever to defend one. {props.solo ? 'You counted them yourself: three from the Legacy dossier, two from the Recruit’s.' : 'You counted them together: three from the Legacy Agent, two from the Recruit.'}</p>
         <p className="mt-2 text-xs text-zinc-500">Source: “FaZe Clan: A Timeline, 2010–2026” (sponsor-provided). The star mapping is the timeline’s own reconstruction, not an official FaZe statement.</p>
       </div>
 
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         <button onClick={() => props.copy(shareText, 'share')} className="rounded-xl bg-faze-red px-5 py-3 font-bold shadow-glow">{props.copied === 'share' ? 'Copied!' : 'Copy achievement to share'}</button>
         <button onClick={async () => { if (navigator.share) { try { await navigator.share({ title: 'FaZe Blackbox', text: shareText }) } catch { /* user cancelled */ } } else props.copy(shareText, 'share') }} className="rounded-xl border border-faze-line px-5 py-3 font-bold">Share…</button>
-        <button onClick={props.onInviteFresh} className="rounded-xl border border-faze-red px-5 py-3 font-bold text-red-200">{props.copied === 'invite' ? 'New room created — invite link copied!' : 'Invite a friend to play'}</button>
+        <button onClick={props.onInviteFresh} className="rounded-xl border border-faze-red px-5 py-3 font-bold text-red-200">Invite a friend to play</button>
         <button onClick={props.onAgain} className="rounded-xl border border-faze-line px-5 py-3 font-bold">Play again — new room</button>
       </div>
 

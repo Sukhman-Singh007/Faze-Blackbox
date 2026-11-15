@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach } from 'vitest'
-import { RoomStore, emptyRoom, ownsSeat, saveSession, loadSession, clearSession, gameElapsedMs, type PlayerSession } from './rooms'
+import { RoomStore, emptyRoom, ownsSeat, saveSession, loadSession, clearSession, gameElapsedMs, type PlayerSession, type RoomState } from './rooms'
 
 // In-memory Storage stand-in for localStorage / sessionStorage in node.
 function makeStorage() {
@@ -14,7 +14,12 @@ function makeStorage() {
 }
 
 beforeEach(() => {
-  Object.assign(globalThis, { localStorage: makeStorage(), sessionStorage: makeStorage() })
+  Object.assign(globalThis, {
+    localStorage: makeStorage(),
+    sessionStorage: makeStorage(),
+    // Minimal window stub: subscribe() only registers a 'storage' listener.
+    window: { addEventListener: () => {}, removeEventListener: () => {} },
+  })
 })
 
 describe('room creation / joining (both host-role combinations)', () => {
@@ -121,6 +126,31 @@ describe('gameplay timer (gameStartedAt)', () => {
     const r = emptyRoom('ABC123', 'A', 'legacy')
     const done = { ...r, gameStartedAt: null, status: 'completed' as const, completedAt: new Date(new Date(r.startedAt).getTime() + 60_000).toISOString() }
     expect(gameElapsedMs(done)).toBe(60_000)
+  })
+})
+
+describe('broadcast isolation (cross-tab leak)', () => {
+  it('save() never broadcasts a room on another room’s channel', async () => {
+    const tick = () => new Promise((r) => setTimeout(r, 20))
+    const sub = new RoomStore()
+    const poster = new RoomStore()
+    const { room: r1 } = sub.create('A', 'legacy')
+    const received: RoomState[] = []
+    const unsub = sub.subscribe(r1.code, (r) => received.push(r))
+    // Poster is also listening on r1's channel (like the second tab was
+    // when it created a fresh room from the completion screen).
+    poster.subscribe(r1.code, () => {})
+    // Creating a different room saves it — that save must NOT leak onto
+    // r1's channel. Before the fix it did, and the other tab adopted the
+    // new room while still showing its completion screen.
+    const { room: r2 } = poster.create('B', 'legacy')
+    await tick()
+    expect(received.filter((x) => x.code === r2.code)).toHaveLength(0)
+    // Saving r1 itself still reaches subscribers.
+    poster.save({ ...r1, lastEvent: 'ping' })
+    await tick()
+    expect(received.some((x) => x.code === r1.code && x.lastEvent === 'ping')).toBe(true)
+    unsub()
   })
 })
 
