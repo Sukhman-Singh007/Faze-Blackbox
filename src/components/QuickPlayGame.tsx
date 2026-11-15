@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { pickQuestions, QP_CATEGORIES, type QPCategory } from '../lib/quickplay'
 import { challengeId, challengeShareText } from '../lib/challenges'
 import { copyText } from '../lib/clipboard'
+import { readRun, saveRun } from '../lib/run-session'
 import { incStat } from '../lib/stats'
 import { SponsorSlot } from './SponsorSlot'
 
@@ -16,59 +17,66 @@ export interface QuickPlayGameProps {
   onExit: () => void
 }
 
+interface QuickPlayRun {
+  index: number
+  selected: number | null
+  answers: boolean[]
+}
+
+function emptyRun(): QuickPlayRun {
+  return { index: 0, selected: null, answers: [] }
+}
+
 export function QuickPlayGame({ category, dateStr, onExit }: QuickPlayGameProps) {
   const questions = useMemo(() => pickQuestions(category, dateStr), [category, dateStr])
-  const [index, setIndex] = useState(0)
-  const [selected, setSelected] = useState<number | null>(null)
-  const [score, setScore] = useState(0)
-  const [answers, setAnswers] = useState<boolean[]>([])
+  const id = challengeId({ kind: 'qp', category, date: dateStr })
+  const [run, setRun] = useState(() => readRun<QuickPlayRun>(id) ?? emptyRun())
+  const { index, selected, answers } = run
+  const score = answers.filter(Boolean).length
+  const activeRun = useRef(run)
   const [copied, setCopied] = useState(false)
-  const startedRef = useRef(false)
-  const finishedRef = useRef(false)
-
+  const [copyFallback, setCopyFallback] = useState('')
   const finished = index >= questions.length
   const q = questions[Math.min(index, questions.length - 1)]
   const label = QP_CATEGORIES.find((c) => c.id === category)?.label ?? category
 
   useEffect(() => {
-    if (!startedRef.current) {
-      startedRef.current = true
-      incStat('qpStarts')
-    }
-  }, [])
+    if (readRun<QuickPlayRun>(id)) return
+    saveRun(id, activeRun.current)
+    incStat('qpStarts')
+  }, [id])
 
-  useEffect(() => {
-    if (finished && !finishedRef.current) {
-      finishedRef.current = true
-      incStat('qpCompletions')
-    }
-  }, [finished])
-
-  const handleAnswer = (i: number) => {
-    if (selected !== null) return
-    setSelected(i)
-    const correct = i === q.answer
-    if (correct) setScore((s) => s + 1)
-    setAnswers((a) => [...a, correct])
+  function update(next: QuickPlayRun) {
+    activeRun.current = next
+    saveRun(id, next)
+    setRun(next)
   }
 
-  const handleNext = () => {
-    setSelected(null)
-    setIndex((i) => i + 1)
+  function handleAnswer(i: number) {
+    const current = activeRun.current
+    if (current.index !== index || current.selected !== null || finished) return
+    update({ ...current, selected: i, answers: [...current.answers, i === q.answer] })
   }
 
-  const handleReplay = () => {
-    setIndex(0)
-    setSelected(null)
-    setScore(0)
-    setAnswers([])
-    finishedRef.current = false
+  function handleNext() {
+    const current = activeRun.current
+    if (current.index !== index || current.selected === null) return
+    const next = index + 1
+    update({ ...current, index: next, selected: null })
+    if (next === questions.length) incStat('qpCompletions')
   }
 
-  const handleChallenge = async () => {
-    const id = challengeId({ kind: 'qp', category, date: dateStr })
+  function handleReplay() {
+    update(emptyRun())
+    setCopyFallback('')
+    incStat('qpStarts')
+  }
+
+  async function handleChallenge() {
     const line = `I scored ${score}/${questions.length} in Sports Quick Play (${label})!`
-    const ok = await copyText(challengeShareText(line, id))
+    const share = challengeShareText(line, id)
+    const ok = await copyText(share)
+    setCopyFallback(ok ? '' : share)
     setCopied(ok)
     window.setTimeout(() => setCopied(false), 2500)
   }
@@ -78,7 +86,7 @@ export function QuickPlayGame({ category, dateStr, onExit }: QuickPlayGameProps)
       <p className="text-xs font-bold tracking-widest text-red-400">SPORTS QUICK PLAY</p>
       <h1 className="mt-1 text-3xl font-black">{label} — five questions</h1>
       <p className="mt-1 text-sm text-zinc-400">
-        Same five questions for everyone today ({dateStr}). Explanations after every answer.
+        Challenge date: {dateStr}. Explanations after every answer.
       </p>
 
       {!finished ? (
@@ -161,6 +169,10 @@ export function QuickPlayGame({ category, dateStr, onExit }: QuickPlayGameProps)
           <p className="mt-2 text-xs text-zinc-500">
             The link opens the same five questions for your friend — their own run, no answers in the link.
           </p>
+          {copyFallback && <label className="mt-3 block text-sm text-zinc-300">
+            Copy this challenge manually
+            <input className="mt-1 w-full rounded border border-zinc-600 bg-black p-2" value={copyFallback} readOnly onFocus={(e) => e.currentTarget.select()} />
+          </label>}
           <SponsorSlot />
         </div>
       )}

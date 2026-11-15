@@ -25,7 +25,7 @@ Each stage has three progressive hints, revealed one at a time. A first-time pla
 Daily play is free in every mode. All four modes are live on the landing page.
 
 ### Daily Match Point — 90-second esports strategy game
-Three rounds, six shared credits. Legacy sees opponent tendencies and a warning about the next round; Recruit sees the plays, their costs, and locks the team's choice. Save is free (costs 0, loses the round) so a team can always finish even if it spends all its credits early. After each round the outcome is explained in one sentence. The results screen shows rounds won, credits left, and the score (rounds won × 100 + credits left × 25 + seconds left on the 90-second clock).
+Three rounds, six shared credits. Legacy sees opponent tendencies and a warning about the next round; Recruit sees the plays, their costs, and locks the team's choice. Save is free (costs 0, loses the round) so a team can always finish even if it spends all its credits early. After each round the outcome is explained in one sentence. The results screen shows rounds won, credits left, and the score (100 per round won + 10 per unused credit + 1 per three seconds remaining, up to 30 time points).
 - Everyone gets the same challenge for a given UTC day (`mp-YYYY-MM-DD`). Three daily scenarios rotate (`src/lib/matchpoint.ts`): Ironwall Five, Blitzline, Ghost Shift. The same play wins in one scenario and loses in another — Rush beats a passive opponent and loses to a stack — and the Legacy dossier always says why.
 - Two-tab co-op reuses the room system (create a Match Point room; same codes, seats, session recovery). Solo practice has a role switcher.
 
@@ -34,7 +34,7 @@ NBA, NFL, soccer and esports, or a mixed round. 24 original questions (6 per cat
 - **To add questions:** edit the one file `src/lib/quickplay.ts` — copy a block, give it a unique id, keep `answer` pointing at the right option. Tests enforce ≥4 questions per category and a valid answer index.
 
 ### Saturday Challenge — free weekly event
-Opens every Saturday at 12:00 p.m. Central Time and stays open through Sunday. Everyone plays the same challenge for the week (two Saturday scenarios rotate). The event card publishes the scoring rules (same formula as Match Point), shows a live countdown, and offers a labelled preview playable any day — preview scores do not count. Scores are stored only in the browser, so personal bests are always labelled "Personal best on this device."
+Opens every Saturday at 12:00 p.m. Central Time and stays open through Sunday. Everyone plays the same challenge for the week (two Saturday scenarios rotate). The event card publishes the scoring rules (same formula as Match Point), shows a live countdown, and offers a labelled preview playable any day — preview scores do not count. Scores are stored only in the browser, so personal bests are labelled "Personal best on this device." The revised scoring starts a fresh local best so earlier scores are not compared on a different scale.
 - **Cash prizes:** the default build collects no entry fees and promises no payout. The card shows an optional "Cash prize preview" that is clearly labelled as an example. A real prize event would need confirmed funding, published contest rules, and server-verified results.
 
 ### Challenge a Friend + Discord
@@ -52,7 +52,7 @@ One clearly labelled example sponsor placement appears after the score, never du
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # vitest — 58 tests: puzzles, rooms, Match Point outcomes/timer/scoring, Quick Play rotation, challenge links, Saturday window/countdown
+npm test           # vitest — 65 tests: puzzles, rooms, Match Point outcomes/timer/scoring, Quick Play rotation, challenge links, Saturday window/countdown
 npm run build      # tsc + vite build
 ```
 
@@ -110,7 +110,7 @@ src/
     SaturdayCard.tsx    # weekly event card, countdown, prize preview
     PackCard.tsx        # Creator Challenge Pack offer + sample
     SponsorSlot.tsx     # labelled example sponsor placement
-  lib/*.test.ts      # unit tests (58 total)
+  lib/*.test.ts      # unit tests (65 total)
 supabase/
   migrations/001_init.sql
   functions/validate-answer/index.ts

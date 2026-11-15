@@ -18,14 +18,13 @@ export function SponsorSlot() {
   }
   return (
     <section className="mt-6 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/40 p-4 text-left">
-      <p className="text-[11px] font-bold tracking-widest text-zinc-500">EXAMPLE SPONSOR PLACEMENT — NOT A REAL SPONSOR</p>
+      <p className="text-[11px] font-bold tracking-widest text-zinc-500">Sponsor placement preview</p>
       <p className="mt-2 text-sm text-zinc-300">
         A gaming brand could sponsor a Saturday Challenge for a flat fee and get a report on starts, completions
         and offer clicks.
       </p>
       <p className="mt-1 text-xs text-zinc-500">
-        On this device: {stats.satStarts} Saturday starts · {stats.satCompletions} completions · {stats.sponsorClicks} offer clicks.
-        Counts are tracked only in this browser.
+        On this device: {stats.satStarts} Saturday starts · {stats.satCompletions} completions · {stats.sponsorClicks} sponsor details opened.
       </p>
       <button
         onClick={handleLearnMore}

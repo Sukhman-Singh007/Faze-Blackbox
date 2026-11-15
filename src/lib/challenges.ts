@@ -31,15 +31,20 @@ export function challengeId(ref: ChallengeRef): string {
   }
 }
 
+function parseDate(value: string): Date | null {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? date : null
+}
+
 export function parseChallenge(id: string): ChallengeRef | null {
   let m = /^mp-(\d{4}-\d{2}-\d{2})$/.exec(id)
-  if (m) return { kind: 'mp-daily', date: m[1] }
+  if (m) return parseDate(m[1]) ? { kind: 'mp-daily', date: m[1] } : null
   m = /^mp-scen-([a-z0-9-]+)$/.exec(id)
   if (m) return { kind: 'mp-scen', scenarioId: m[1] }
   m = /^sat-(\d{4}-\d{2}-\d{2})$/.exec(id)
-  if (m) return { kind: 'sat', weekId: m[1] }
+  if (m) return parseDate(m[1])?.getUTCDay() === 6 ? { kind: 'sat', weekId: m[1] } : null
   m = /^qp-(nba|nfl|soccer|esports|mixed)-(\d{4}-\d{2}-\d{2})$/.exec(id)
-  if (m) return { kind: 'qp', category: m[1] as QPCategory, date: m[2] }
+  if (m) return parseDate(m[2]) ? { kind: 'qp', category: m[1] as QPCategory, date: m[2] } : null
   return null
 }
 

@@ -12,10 +12,12 @@ export async function copyText(text: string): Promise<boolean> {
       ta.style.position = 'fixed'
       ta.style.opacity = '0'
       document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      ta.remove()
-      return true
+      try {
+        ta.select()
+        return document.execCommand('copy')
+      } finally {
+        ta.remove()
+      }
     } catch {
       return false
     }

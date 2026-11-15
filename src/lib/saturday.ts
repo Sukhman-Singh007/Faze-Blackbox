@@ -64,7 +64,7 @@ function ctOffsetMs(d: Date): number {
     Number(parts.minute),
     Number(parts.second),
   )
-  return asUtc - d.getTime()
+  return asUtc - Math.floor(d.getTime() / 1000) * 1000
 }
 
 /** The next Saturday 12:00 p.m. Central, as an instant. */
@@ -100,15 +100,19 @@ export function isSaturdayOpen(now = new Date()): boolean {
  *  "2026-11-14". Stable for the whole open weekend. */
 export function saturdayWeekId(now = new Date()): string {
   const p = ctParts(now)
-  // If it is Sunday, the week belongs to yesterday (Saturday).
-  const dayShift = p.weekday === 0 ? -1 : 0
+  // During the open Sunday window, keep Saturday’s event. On other days,
+  // the preview points to the next Saturday.
+  const dayShift = p.weekday === 0 ? -1 : (6 - p.weekday + 7) % 7
   const d = new Date(Date.UTC(p.year, p.month, p.day + dayShift))
   return d.toISOString().slice(0, 10)
 }
 
 /** Which Saturday scenario runs this week. Rotates weekly. */
 export function saturdayScenario(now = new Date()): Scenario {
-  const weekId = saturdayWeekId(now)
+  return saturdayScenarioForWeek(saturdayWeekId(now))
+}
+
+export function saturdayScenarioForWeek(weekId: string): Scenario {
   const weekNumber = Math.floor(new Date(`${weekId}T00:00:00.000Z`).getTime() / (7 * 86_400_000))
   return SATURDAY_SCENARIOS[((weekNumber % SATURDAY_SCENARIOS.length) + SATURDAY_SCENARIOS.length) % SATURDAY_SCENARIOS.length]
 }
@@ -120,12 +124,13 @@ export function saturdayCountdown(now = new Date()): { open: boolean; seconds: n
     const p = ctParts(now)
     const daysToMonday = (8 - p.weekday) % 7
     const closeCt = Date.UTC(p.year, p.month, p.day + daysToMonday, 0, 0, 0)
-    const offset = ctOffsetMs(now)
-    const seconds = Math.max(0, Math.floor((closeCt - offset - now.getTime()) / 1000))
+    const guess = closeCt - ctOffsetMs(now)
+    const closeUtc = closeCt - ctOffsetMs(new Date(guess))
+    const seconds = Math.max(0, Math.ceil((closeUtc - now.getTime()) / 1000))
     return { open: true, seconds, label: 'Closes in' }
   }
   const next = nextSaturdayNoonCT(now)
-  return { open: false, seconds: Math.max(0, Math.floor((next.getTime() - now.getTime()) / 1000)), label: 'Opens in' }
+  return { open: false, seconds: Math.max(0, Math.ceil((next.getTime() - now.getTime()) / 1000)), label: 'Opens in' }
 }
 
 export function fmtCountdown(totalSeconds: number): string {
@@ -147,7 +152,7 @@ export interface SaturdayBest {
   at: string
 }
 
-const BEST_KEY = (weekId: string) => `faze-blackbox:sat-best:${weekId}`
+const BEST_KEY = (weekId: string) => `faze-blackbox:sat-best:v2:${weekId}`
 
 export function getSaturdayBest(weekId: string): SaturdayBest | null {
   try {
